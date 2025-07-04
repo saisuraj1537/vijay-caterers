@@ -257,7 +257,13 @@ const generatePdf = (booking) => {
 </div>
 
 
-    
+    <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777;">
+      <p>📍 Hyderabad, Telangana</p>
+      <p>📞 9866973747 / 9959500833</p>
+      <p>📧 <a href="mailto:darwaen1211@gmail.com" style="color: #b8860b;">darwaen1211@gmail.com</a></p>
+      <p>📸 Instagram: <a href="https://instagram.com/vijaycaterers_" style="color: #b8860b;">@vijaycaterers_</a></p>
+      <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
+    </div>
   </div>
 `;
 
@@ -265,13 +271,7 @@ const generatePdf = (booking) => {
   html2pdf().from(content).save(filename);
 };
 
-{/* <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777;">
-      <p>📍 Hyderabad, Telangana</p>
-      <p>📞 9866973747 / 9959500833</p>
-      <p>📧 <a href="mailto:darwaen1211@gmail.com" style="color: #b8860b;">darwaen1211@gmail.com</a></p>
-      <p>📸 Instagram: <a href="https://instagram.com/vijaycaterers_" style="color: #b8860b;">@vijaycaterers_</a></p>
-      <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
-    </div> */}
+ 
 
 
 
