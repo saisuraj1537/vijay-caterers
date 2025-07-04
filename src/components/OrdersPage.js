@@ -6,6 +6,7 @@ import { database } from '../firebase';
 import emailjs from 'emailjs-com';
 import html2pdf from 'html2pdf.js';
 
+
 function OrdersPage() {
   const [eventDates, setEventDates] = useState([]);
   const [allBookings, setAllBookings] = useState([]);
@@ -55,13 +56,15 @@ function OrdersPage() {
 
   const tileClassName = ({ date, view }) => {
     if (view === 'month') {
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = date.toLocaleDateString('en-CA'); // returns 'YYYY-MM-DD'
+
       return eventDates.includes(dateStr) ? 'highlight' : null;
     }
   };
 
   const handleDateClick = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = date.toLocaleDateString('en-CA'); // returns 'YYYY-MM-DD'
+
     setSelectedDate(dateStr);
     const filtered = allBookings.filter((booking) => booking.date === dateStr);
     setSelectedDateBookings(filtered);
@@ -132,55 +135,145 @@ const markAsCompleted = (booking) => {
 };
 
 
-  const generatePdf = (booking) => {
-    const filename = `Order_${booking.name.replace(/\s/g, '_')}_${booking.date}.pdf`;
+const generatePdf = (booking) => {
+  const filename = `Order_${booking.name.replace(/\s/g, '_')}_${booking.date}.pdf`;
 
-    // Generate items list HTML for PDF
-    const itemsHtml = Object.entries(booking.selectedItems || {})
-      .map(([category, items]) => {
-        const itemsArray = Array.isArray(items) ? items : 
-          (typeof items === 'object' ? Object.keys(items).filter(item => items[item]) : []);
-        
-        if (itemsArray.length === 0) return '';
-        
-        const categoryItems = itemsArray.map(item => 
-          `<li style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed #e0e0e0;">
-            <span style="font-weight: 500;">${typeof item === 'string' ? item : item.name}</span>
-            <span style="color: #7f8c8d; font-weight: 600;">${typeof item === 'string' ? '' : `-${item.count}`}</span>
-          </li>`
-        ).join('');
-        
-        return `
-          <div style="margin-bottom: 15px;">
-            <h4 style="color: #3498db; margin: 10px 0 5px 0; font-size: 14px;">${category.charAt(0).toUpperCase() + category.slice(1)}</h4>
-            <ul style="list-style: none; padding: 0; margin: 0;">
-              ${categoryItems}
-            </ul>
-          </div>
-        `;
-      }).join('');
+  // Your desired custom category order
+  const categoryOrder = [
+    "sweets",
+    "juices",
+    "veg snacks",
+    "hots",
+    "rotis",
+    "kurma curries",
+    "special greavy curryis",
+    "special rice items",
+    "veg dum biryani",
+    "dal items",
+    "veg fry items",
+    "liquid items",
+    "roti chutneys",
+    "avakayalu",
+    "powders",
+    "curds",
+    "papads",
+    "chat items",
+    "chinese",
+    "italian snacks",
+    "south indian tiffin items",
+    "fruits",
+    "ice creams",
+    "chicken snacks",
+    "prawn snacks",
+    "egg snacks",
+    "sea food",
+    "mutton curries",
+    "egg",
+    "prawns",
+    "chicken curries",
+    "crabs",
+    "non veg biryanis"
+  ];
 
-    const content = 
-      `<div style="font-family: 'Inter', sans-serif; padding: 20px; color: #34495e; background-color: #f8faff;">
-        <h1 style="text-align: center; color: #2c3e50; margin-bottom: 20px;">Order Details</h1>
-        <div style="background: #ffffff; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); padding: 20px; margin-bottom: 20px;">
-          <h2 style="color: #4a90e2; margin-top: 0;">${booking.name}</h2>
-          <p><strong style="color: #7f8c8d;">Event Date:</strong> ${booking.date}</p>
-          <p><strong style="color: #7f8c8d;">Event Time:</strong> ${booking.eventTime}</p>
-          <p><strong style="color: #7f8c8d;">Event Place:</strong> ${booking.eventPlace}</p>
-          <p><strong style="color: #7f8c8d;">Plates:</strong> ${booking.plates}</p>
-          <p><strong style="color: #7f8c8d;">Mobile:</strong> ${booking.mobile}</p>
-          <p><strong style="color: #7f8c8d;">Email:</strong> ${booking.email}</p>
+  const selectedItems = booking.selectedItems || {};
+
+  // Normalize keys to lowercase to match categoryOrder
+  const normalizedSelectedItems = Object.entries(selectedItems).reduce((acc, [key, val]) => {
+    acc[key.toLowerCase()] = val;
+    return acc;
+  }, {});
+
+  const itemsHtml = categoryOrder
+    .filter((category) => normalizedSelectedItems[category])
+    .map((category) => {
+      const items = normalizedSelectedItems[category];
+      const itemsArray = Array.isArray(items)
+        ? items
+        : typeof items === 'object'
+          ? Object.keys(items).filter((item) => items[item])
+          : [];
+
+      if (itemsArray.length === 0) return '';
+
+      const formattedItems = itemsArray
+        .map(
+          (item) =>
+            `<li style="margin: 4px 0;">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
+        )
+        .join('');
+
+      // Capitalize first letter of each word in category
+      const formattedCategory = category.replace(/\b\w/g, c => c.toUpperCase());
+
+      return `
+  <div style="margin-bottom: 15px; page-break-inside: avoid;">
+    <h4 style="color: #8B4513; margin: 8px 0; font-size: 15px;">${formattedCategory}</h4>
+    <ul style="margin: 0; padding-left: 20px; color: #555; page-break-inside: avoid;">
+      ${formattedItems}
+    </ul>
+  </div>
+`;
+
+    })
+    .join('');
+
+    
+
+  // HTML structure of the PDF
+  const content = `
+  <div style="font-family: 'Georgia', serif; padding: 30px; color: #3c3c3c; background-color: #fffbe6; border: 10px solid #f5e1a4;">
+    <div style="text-align: center; margin-bottom: 25px;">
+      <img src="https://res.cloudinary.com/dnllne8qr/image/upload/v1735446856/WhatsApp_Image_2024-12-27_at_8.13.22_PM-removebg_m3863q.png" alt="Vijay Caterers" style="width: 150px; margin-bottom: 10px;" />
+      <h1 style="font-size: 24px; color: #b8860b;">Vijay Caterers</h1>
+      <p style="font-style: italic; color: #555;">"Elevate your event with our exceptional catering services"</p>
+    </div>
+
+    <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+
+    <div style="margin-bottom: 25px;">
+      <h2 style="color: #8B4513; font-size: 18px; margin-bottom: 12px;">Order Details</h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+        <div style="flex: 1 1 45%;">
+          <p><strong>Name:</strong> ${booking.name}</p>
+          <p><strong>Mobile:</strong> ${booking.mobile}</p>
+          <p><strong>Email:</strong> ${booking.email}</p>
         </div>
-        <div style="background: #ffffff; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); padding: 20px;">
-          <h3 style="color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0;">Selected Items:</h3>
-          ${itemsHtml}
+        <div style="flex: 1 1 45%;">
+          <p><strong>Event Date:</strong> ${booking.date}</p>
+          <p><strong>Event Time:</strong> ${booking.eventTime}</p>
+          <p><strong>Event Place:</strong> ${booking.eventPlace}</p>
+          <p><strong>No. of Plates:</strong> ${booking.plates}</p>
         </div>
-        <p style="text-align: center; margin-top: 30px; color: #95a5a6; font-size: 0.9em;">Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
-      </div>`;
+      </div>
+    </div>
 
-    html2pdf().from(content).save(filename);
-  };
+    <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+
+    <div style="margin-bottom: 30px;">
+  <h2 style="color: #8B4513; font-size: 18px;">Selected Items</h2>
+  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+    ${itemsHtml}
+  </div>
+</div>
+
+
+    
+  </div>
+`;
+
+
+  html2pdf().from(content).save(filename);
+};
+
+{/* <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777;">
+      <p>📍 Hyderabad, Telangana</p>
+      <p>📞 9866973747 / 9959500833</p>
+      <p>📧 <a href="mailto:darwaen1211@gmail.com" style="color: #b8860b;">darwaen1211@gmail.com</a></p>
+      <p>📸 Instagram: <a href="https://instagram.com/vijaycaterers_" style="color: #b8860b;">@vijaycaterers_</a></p>
+      <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
+    </div> */}
+
+
 
   const renderBookingCard = (booking, index) => {
     const isCompleted = !!completedBookingsMap[booking.key];

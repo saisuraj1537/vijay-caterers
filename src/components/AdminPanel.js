@@ -155,16 +155,24 @@ function AdminPanel() {
                       <div className="items-section">
                         <h4 className="section-title">Selected Items</h4>
                         <div className="items-grid">
-                          {Object.entries(items).map(([cat, list]) =>
-                            Array.isArray(list) && list.length > 0 && (
-                              <div key={cat} className="category-group">
-                                <h5 className="category-title">{cat.charAt(0).toUpperCase() + cat.slice(1)}</h5>
-                                <ul className="item-list">
-                                  {list.map((item, i) => <li key={i}>{item}</li>)}
-                                </ul>
-                              </div>
-                            )
-                          )}
+                          {[
+  "sweets", "juices", "veg snacks", "hots", "rotis", "kurma curries", "special greavy curryis",
+  "special rice items", "veg dum biryani", "dal items", "veg fry items", "liquid items", "roti chutneys",
+  "avakayalu", "powders", "curds", "papads", "chat items", "chinese", "italian snacks",
+  "south indian tiffin items", "fruits", "ice creams", "chicken snacks", "prawn snacks", "egg snacks",
+  "sea food", "mutton curries", "egg", "prawns", "chicken curries", "crabs", "non veg biryanis"
+].map(cat => {
+  const list = items[cat];
+  return Array.isArray(list) && list.length > 0 && (
+    <div key={cat} className="category-group">
+      <h5 className="category-title">{cat.charAt(0).toUpperCase() + cat.slice(1)}</h5>
+      <ul className="item-list">
+        {list.map((item, i) => <li key={i}>{item}</li>)}
+      </ul>
+    </div>
+  );
+})}
+
                         </div>
                       </div>
 

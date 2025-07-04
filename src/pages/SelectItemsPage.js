@@ -10,8 +10,8 @@ function SelectItemsPage() {
   const [nonVegItemsGrouped, setNonVegItemsGrouped] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
-  const [customItem, setCustomItem] = useState('');  // State for custom item input
-  const [loading, setLoading] = useState(true);  // State for loading
+  const [customItem, setCustomItem] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -19,6 +19,18 @@ function SelectItemsPage() {
 
   const userMobile = booking?.userMobile || localStorage.getItem('loggedInMobile');
   const customerName = booking?.customerName;
+
+  // ✅ Define custom display order of categories
+  const customCategoryOrder = [
+    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
+    'kurmaCurries', 'specialGreavyCurries', 'specialRiceItems', 'vegDumBiryanis',
+    'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
+    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
+    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams',
+    'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
+    'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
+    'crabItems', 'nonVegBiryanis'
+  ];
 
   useEffect(() => {
     if (!userMobile || !customerName) return;
@@ -28,17 +40,13 @@ function SelectItemsPage() {
     const itemsRef = ref(db, 'items');
     onValue(itemsRef, (snapshot) => {
       const data = snapshot.val();
-      if (data) {
-        setVegItemsGrouped(data);
-      }
+      if (data) setVegItemsGrouped(data);
     });
 
     const nonVegRef = ref(db, 'nonVegItems');
     onValue(nonVegRef, (snapshot) => {
       const data = snapshot.val();
-      if (data) {
-        setNonVegItemsGrouped(data);
-      }
+      if (data) setNonVegItemsGrouped(data);
     });
 
     const bookingRef = ref(db, `bookings/${userMobile}/${customerName}`);
@@ -50,7 +58,7 @@ function SelectItemsPage() {
       } else {
         setDetails(booking?.details || null);
       }
-      setLoading(false);  // Set loading to false when data is loaded
+      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -83,47 +91,48 @@ function SelectItemsPage() {
     setFilter(category);
   };
 
-  // Function to handle adding custom item
   const addCustomItem = () => {
-    if (!customItem.trim()) return; // Do not add empty custom items
+    if (!customItem.trim()) return;
 
     const db = getDatabase();
-    const customItemsRef = ref(db, `bookings/${userMobile}/${customerName}/items/customItems`); // Path where custom items are stored
+    const customItemsRef = ref(db, `bookings/${userMobile}/${customerName}/items/customItems`);
 
-    // Get current custom items from the database
     onValue(customItemsRef, (snapshot) => {
       const currentItems = snapshot.val() || {};
+      const exists = Object.values(currentItems).some(item => item.toLowerCase() === customItem.trim().toLowerCase());
 
-      // Check if the custom item already exists
-      const existingItemKey = Object.values(currentItems).findIndex(item => item.toLowerCase() === customItem.trim().toLowerCase());
+      if (exists) return;
 
-      if (existingItemKey !== -1) {
-        return; // Stop if the item already exists
-      }
-
-      // Get the next available key for the new item
       const newItemKey = Object.keys(currentItems).length;
-
-      // Create the updated custom items object with the new item
       const updatedItems = { ...currentItems, [newItemKey]: customItem.trim() };
 
-      // Update the custom items in the database
       set(customItemsRef, updatedItems)
         .then(() => {
-          setCustomItem(''); // Clear the input after adding
+          setCustomItem('');
           alert("Custom item added successfully!");
         })
         .catch((error) => {
           console.error("Error adding custom item:", error);
         });
-    });
+    }, { onlyOnce: true });
   };
 
+  // ✅ Apply custom sorting logic here
   const renderGroupedItems = (groupedItems) => {
-    return Object.entries(groupedItems).map(([category, itemsObj]) => {
-      const lowerSearch = searchTerm.toLowerCase();
-      const categoryMatch = category.toLowerCase().includes(lowerSearch);
+    const lowerSearch = searchTerm.toLowerCase();
 
+    const sortedEntries = Object.entries(groupedItems).sort((a, b) => {
+      const indexA = customCategoryOrder.indexOf(a[0]);
+      const indexB = customCategoryOrder.indexOf(b[0]);
+
+      if (indexA === -1 && indexB === -1) return a[0].localeCompare(b[0]);
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+
+    return sortedEntries.map(([category, itemsObj]) => {
+      const categoryMatch = category.toLowerCase().includes(lowerSearch);
       const filteredItems = Object.values(itemsObj).filter((item) =>
         item.toLowerCase().includes(lowerSearch)
       );
@@ -131,8 +140,6 @@ function SelectItemsPage() {
       if (!categoryMatch && filteredItems.length === 0) return null;
 
       const itemsToDisplay = categoryMatch ? Object.values(itemsObj) : filteredItems;
-
-      // Count the number of selected items for the current category
       const selectedCount = selectedItems[category]?.length || 0;
 
       return (
@@ -145,7 +152,7 @@ function SelectItemsPage() {
             borderBottom: '2px solid #e0e0e0',
             paddingBottom: '4px',
           }}>
-            {category} ({selectedCount}) {/* Display the selected count */}
+            {category} ({selectedCount})
           </h3>
 
           <div style={{
@@ -193,134 +200,131 @@ function SelectItemsPage() {
   };
 
   return (
-    // Adjusted to prevent layout shifting
-<div style={{
-  padding: '16px',
-  maxWidth: '700px',
-  margin: '0 auto',
-  fontFamily: 'Segoe UI, Roboto, sans-serif',
-}}>
-  <h2 style={{ fontSize: '22px', fontWeight: '600', marginBottom: '10px', textAlign: 'center' }}>
-    Select Food Items for <span style={{ color: '#2b79b5' }}>{customerName}</span>
-  </h2>
-
-  {/* Loading UI */}
-  {loading ? (
     <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '200px',
-      fontSize: '18px',
-      color: '#2b79b5',
+      padding: '16px',
+      maxWidth: '700px',
+      margin: '0 auto',
+      fontFamily: 'Segoe UI, Roboto, sans-serif',
     }}>
-      <ClipLoader />
-    </div>
-  ) : (
-    <>
-      {/* Search + Filter */}
-      <div style={{
-        position: 'sticky',
-        top: 50,
-        backgroundColor: '#fff',
-        zIndex: 1000,
-        padding: '12px 0',
-        marginBottom: '16px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',  // Optional for shadow effect
-      }}>
-        <input
-          type="text"
-          placeholder="Search item or category..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            padding: '12px 14px',
-            width: '100%',
-            marginBottom: '12px',
-            borderRadius: '10px',
-            border: '1px solid #ccc',
-            fontSize: '16px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-          }}
-        />
+      <h2 style={{ fontSize: '22px', fontWeight: '600', marginBottom: '10px', textAlign: 'center' }}>
+        Select Food Items for <span style={{ color: '#2b79b5' }}>{customerName}</span>
+      </h2>
 
+      {loading ? (
         <div style={{
           display: 'flex',
           justifyContent: 'center',
-          gap: '10px',
-          flexWrap: 'wrap',
-          marginBottom: '10px'
+          alignItems: 'center',
+          height: '200px',
+          fontSize: '18px',
+          color: '#2b79b5',
         }}>
-          {['all', 'veg', 'nonveg'].map((cat) => (
+          <ClipLoader />
+        </div>
+      ) : (
+        <>
+          {/* Search & Filter */}
+          <div style={{
+            position: 'sticky',
+            top: 50,
+            backgroundColor: '#fff',
+            zIndex: 1000,
+            padding: '12px 0',
+            marginBottom: '16px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          }}>
+            <input
+              type="text"
+              placeholder="Search item or category..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                padding: '12px 14px',
+                width: '100%',
+                marginBottom: '12px',
+                borderRadius: '10px',
+                border: '1px solid #ccc',
+                fontSize: '16px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              }}
+            />
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '10px',
+              flexWrap: 'wrap',
+              marginBottom: '10px'
+            }}>
+              {['all', 'veg', 'nonveg'].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => handleFilterChange(cat)}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: filter === cat ? '#2b79b5' : '#f0f0f0',
+                    color: filter === cat ? '#fff' : '#333',
+                    borderRadius: '20px',
+                    border: 'none',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom Item Input */}
+          <div style={{ marginBottom: '16px' }}>
+            <input
+              type="text"
+              value={customItem}
+              onChange={(e) => setCustomItem(e.target.value)}
+              placeholder="Add custom item..."
+              style={{
+                padding: '12px 14px',
+                width: '100%',
+                marginBottom: '8px',
+                borderRadius: '10px',
+                border: '1px solid #ccc',
+                fontSize: '16px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              }}
+            />
             <button
-              key={cat}
-              onClick={() => handleFilterChange(cat)}
+              onClick={addCustomItem}
               style={{
                 padding: '8px 16px',
-                backgroundColor: filter === cat ? '#2b79b5' : '#f0f0f0',
-                color: filter === cat ? '#fff' : '#333',
+                backgroundColor: '#2b79b5',
+                color: '#fff',
                 borderRadius: '20px',
                 border: 'none',
                 fontSize: '14px',
                 cursor: 'pointer',
-                fontWeight: '500',
-                transition: 'all 0.2s',
               }}
             >
-              {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              Add Custom Item
             </button>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {/* Custom Item Input */}
-      <div style={{ marginBottom: '16px' }}>
-        <input
-          type="text"
-          value={customItem}
-          onChange={(e) => setCustomItem(e.target.value)}
-          placeholder="Add custom item..."
-          style={{
-            padding: '12px 14px',
-            width: '100%',
-            marginBottom: '8px',
-            borderRadius: '10px',
-            border: '1px solid #ccc',
-            fontSize: '16px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-          }}
-        />
-        <button
-          onClick={addCustomItem}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#2b79b5',
-            color: '#fff',
-            borderRadius: '20px',
-            border: 'none',
-            fontSize: '14px',
-            cursor: 'pointer',
-          }}
-        >
-          Add Custom Item
-        </button>
-      </div>
-
-      {/* Render Items */}
-      <div>
-        {filter === 'all' && (
-          <>
-            {renderGroupedItems(vegItemsGrouped)}
-            {renderGroupedItems(nonVegItemsGrouped)}
-          </>
-        )}
-        {filter === 'veg' && renderGroupedItems(vegItemsGrouped)}
-        {filter === 'nonveg' && renderGroupedItems(nonVegItemsGrouped)}
-      </div>
-    </>
-  )}
-</div>
-
+          {/* Render Items */}
+          <div>
+            {filter === 'all' && (
+              <>
+                {renderGroupedItems(vegItemsGrouped)}
+                {renderGroupedItems(nonVegItemsGrouped)}
+              </>
+            )}
+            {filter === 'veg' && renderGroupedItems(vegItemsGrouped)}
+            {filter === 'nonveg' && renderGroupedItems(nonVegItemsGrouped)}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
