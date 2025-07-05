@@ -12,6 +12,10 @@ function OrdersPage() {
   const [selectedDateBookings, setSelectedDateBookings] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const [notesMap, setNotesMap] = useState({});
+  const [showDateRangePopup, setShowDateRangePopup] = useState(false);
+
+
   const [completedBookingsMap, setCompletedBookingsMap] = useState({});
 
   const [startDate, setStartDate] = useState('');
@@ -51,6 +55,54 @@ function OrdersPage() {
       setAllBookings(bookingsList);
     });
   }, []);
+
+  useEffect(() => {
+  const bookingsRef = ref(database, 'finalBookings');
+  const notesRef = ref(database, 'adminNotes');
+
+  onValue(bookingsRef, (snapshot) => {
+    const data = snapshot.val() || {};
+    const dates = [];
+    const bookingsList = [];
+
+    if (data) {
+      Object.values(data).forEach((userBookings) => {
+        Object.entries(userBookings).forEach(([key, value]) => {
+          if (value.details?.eventDate) {
+            const eventDate = value.details.eventDate;
+            bookingsList.push({
+              ...value.details,
+              date: eventDate,
+              key,
+              selectedItems: value.items || {},
+            });
+            dates.push(eventDate);
+          }
+        });
+      });
+    }
+
+    setEventDates(dates);
+    setAllBookings(bookingsList);
+  });
+
+  // Fetch notes separately
+  onValue(notesRef, (snapshot) => {
+    setNotesMap(snapshot.val() || {});
+  });
+}, []);
+
+const saveNote = (bookingKey, note) => {
+  const noteRef = ref(database, `adminNotes/${bookingKey}`);
+  set(noteRef, note)
+    .then(() => {
+      setNotesMap((prev) => ({ ...prev, [bookingKey]: note }));
+      alert('Note saved!');
+    })
+    .catch((err) => alert('Failed to save note: ' + err.message));
+};
+
+
 
   // Effect to calculate current and last month dates on component mount
   useEffect(() => {
@@ -147,104 +199,130 @@ function OrdersPage() {
   };
 
   const generatePdf = (booking) => {
-    const filename = `Order_${booking.name.replace(/\s/g, '_')}_${booking.date}.pdf`;
+  const filename = `Order_${booking.name.replace(/\s/g, '_')}_${booking.date}.pdf`;
 
-    const categoryOrder = [
-      "sweets", "juices", "veg snacks", "hots", "rotis", "kurma curries", "special greavy curryis",
-      "special rice items", "veg dum biryani", "dal items", "veg fry items", "liquid items",
-      "roti chutneys", "avakayalu", "powders", "curds", "papads", "chat items", "chinese",
-      "italian snacks", "south indian tiffin items", "fruits", "ice creams", "chicken snacks",
-      "prawn snacks", "egg snacks", "sea food", "mutton curries", "egg", "prawns",
-      "chicken curries", "crabs", "non veg biryanis"
-    ];
+  const categoryOrder = [
+    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
+    'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
+    'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
+    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
+    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams',
+    'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
+    'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
+    'crabItems', 'nonVegBiryanis','customItems'
+  ];
 
-    const selectedItems = booking.selectedItems || {};
+  const selectedItems = booking.selectedItems || {};
 
-    const normalizedSelectedItems = Object.entries(selectedItems).reduce((acc, [key, val]) => {
-      acc[key.toLowerCase()] = val;
-      return acc;
-    }, {});
+  // Normalize input keys to lowercase map for safe matching
+  const normalizedSelectedItems = {};
+  Object.entries(selectedItems).forEach(([key, value]) => {
+    normalizedSelectedItems[key.toLowerCase()] = value;
+  });
 
-    const itemsHtml = categoryOrder
-      .filter((category) => normalizedSelectedItems[category])
-      .map((category) => {
-        const items = normalizedSelectedItems[category];
-        const itemsArray = Array.isArray(items)
-          ? items
-          : typeof items === 'object'
-            ? Object.keys(items).filter((item) => items[item])
-            : [];
+  const inputKeys = Object.keys(normalizedSelectedItems);
 
-        if (itemsArray.length === 0) return '';
+  // 1. Match known categories (case-insensitive)
+  const orderedCategories = categoryOrder.filter((cat) =>
+    inputKeys.includes(cat.toLowerCase())
+  );
 
-        const formattedItems = itemsArray
-          .map(
-            (item) =>
-              `<li style="margin: 4px 0;">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
-          )
-          .join('');
+  // 2. Add unknown categories (not in categoryOrder)
+  const extraCategories = inputKeys.filter(
+    (inputKey) =>
+      !categoryOrder.some(
+        (orderedCat) => orderedCat.toLowerCase() === inputKey
+      )
+  );
 
-        const formattedCategory = category.replace(/\b\w/g, c => c.toUpperCase());
+  // 3. Final combined list
+  const allCategories = [...orderedCategories, ...extraCategories];
 
-        return `
-          <div style="margin-bottom: 15px; page-break-inside: avoid;">
-            <h4 style="color: #8B4513; margin: 8px 0; font-size: 15px;">${formattedCategory}</h4>
-            <ul style="margin: 0; padding-left: 20px; color: #555; page-break-inside: avoid;">
-              ${formattedItems}
-            </ul>
-          </div>
-        `;
-      })
-      .join('');
+  // Convert camelCase to spaced and capitalized
+  const formatCategory = (text) =>
+    text
+      .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space before capital
+      .replace(/\b\w/g, (char) => char.toUpperCase()); // Capitalize
 
-    const content = `
-      <div style="font-family: 'Georgia', serif; padding: 30px; color: #3c3c3c; background-color: #fffbe6; border: 10px solid #f5e1a4;">
-        <div style="text-align: center; margin-bottom: 25px;">
-          <img src="https://res.cloudinary.com/dnllne8qr/image/upload/v1735446856/WhatsApp_Image_2024-12-27_at_8.13.22_PM-removebg_m3863q.png" alt="Vijay Caterers" style="width: 150px; margin-bottom: 10px;" />
-          <h1 style="font-size: 24px; color: #b8860b;">Vijay Caterers</h1>
-          <p style="font-style: italic; color: #555;">"Elevate your event with our exceptional catering services"</p>
+  const itemsHtml = allCategories
+    .map((category) => {
+      const items = normalizedSelectedItems[category.toLowerCase()];
+      const itemsArray = Array.isArray(items)
+        ? items
+        : typeof items === 'object'
+          ? Object.keys(items).filter((item) => items[item])
+          : [];
+
+      if (!itemsArray || itemsArray.length === 0) return '';
+
+      const formattedItems = itemsArray
+        .map((item) =>
+          `<li style="margin: 4px 0;">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
+        )
+        .join('');
+
+      const formattedCategory = formatCategory(category);
+
+      return `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h4 style="color: #8B4513; margin: 8px 0; font-size: 15px;">${formattedCategory}</h4>
+          <ul style="margin: 0; padding-left: 20px; color: #555; page-break-inside: avoid;">
+            ${formattedItems}
+          </ul>
         </div>
+      `;
+    })
+    .join('');
 
-        <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+  const content = `
+    <div style="font-family: 'Georgia', serif; padding: 30px; color: #3c3c3c; background-color: #fffbe6; border: 10px solid #f5e1a4;">
+      <div style="text-align: center; margin-bottom: 25px;">
+        <h1 style="font-size: 24px; color: #b8860b;">Vijay Caterers</h1>
+        <p style="font-style: italic; color: #555;">"Elevate your event with our exceptional catering services"</p>
+      </div>
 
-        <div style="margin-bottom: 25px;">
-          <h2 style="color: #8B4513; font-size: 18px; margin-bottom: 12px;">Order Details</h2>
-          <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-            <div style="flex: 1 1 45%;">
-              <p><strong>Name:</strong> ${booking.name}</p>
-              <p><strong>Mobile:</strong> ${booking.mobile}</p>
-              <p><strong>Email:</strong> ${booking.email}</p>
-            </div>
-            <div style="flex: 1 1 45%;">
-              <p><strong>Event Date:</strong> ${booking.date}</p>
-              <p><strong>Event Time:</strong> ${booking.eventTime}</p>
-              <p><strong>Event Place:</strong> ${booking.eventPlace}</p>
-              <p><strong>No. of Plates:</strong> ${booking.plates}</p>
-            </div>
+      <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+
+      <div style="margin-bottom: 25px;">
+        <h2 style="color: #8B4513; font-size: 18px; margin-bottom: 12px;">Order Details</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+          <div style="flex: 1 1 45%;">
+            <p><strong>Name:</strong> ${booking.name}</p>
+            <p><strong>Mobile:</strong> ${booking.mobile}</p>
+            <p><strong>Email:</strong> ${booking.email}</p>
           </div>
-        </div>
-
-        <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
-
-        <div style="margin-bottom: 30px;">
-          <h2 style="color: #8B4513; font-size: 18px;">Selected Items</h2>
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-            ${itemsHtml}
+          <div style="flex: 1 1 45%;">
+            <p><strong>Event Date:</strong> ${booking.date}</p>
+            <p><strong>Event Time:</strong> ${booking.eventTime}</p>
+            <p><strong>Event Place:</strong> ${booking.eventPlace}</p>
+            <p><strong>No. of Plates:</strong> ${booking.plates}</p>
           </div>
-        </div>
-
-        <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777;">
-          <p>📍 Hyderabad, Telangana</p>
-          <p>📞 9866973747 / 9959500833</p>
-          <p>📧 <a href="mailto:darwaen1211@gmail.com" style="color: #b8860b;">darwaen1211@gmail.com</a></p>
-          <p>📸 Instagram: <a href="https://instagram.com/vijaycaterers_" style="color: #b8860b;">@vijaycaterers_</a></p>
-          <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
         </div>
       </div>
-    `;
 
-    html2pdf().from(content).save(filename);
-  };
+      <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+
+      <div style="margin-bottom: 30px;">
+        <h2 style="color: #8B4513; font-size: 18px;">Selected Items</h2>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+          ${itemsHtml}
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777;">
+        <p>📍 Hyderabad, Telangana</p>
+        <p>📞 9866973747 / 9959500833</p>
+        <p>📧 <a href="mailto:darwaen1211@gmail.com" style="color: #b8860b;">darwaen1211@gmail.com</a></p>
+        <p>📸 Instagram: <a href="https://instagram.com/vijaycaterers_" style="color: #b8860b;">@vijaycaterers_</a></p>
+        <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
+      </div>
+    </div>
+  `;
+
+  html2pdf().from(content).save(filename);
+};
+
+
 
   const handleDownloadDateRange = (start, end, rangeName = 'Selected Range') => {
     if (!start || !end) {
@@ -332,93 +410,159 @@ function OrdersPage() {
   };
 
   const renderBookingCard = (booking, index) => {
-    const isCompleted = !!completedBookingsMap[booking.key];
+  const isCompleted = !!completedBookingsMap[booking.key];
 
-    return (
-      <div
-        key={booking.key}
-        className={`booking-card ${isCompleted ? 'completed' : ''} ${
-          expandedIndex === index ? 'expanded' : ''
-        }`}
-        onClick={() => setExpandedIndex(index === expandedIndex ? null : index)}
-      >
-        <div className="booking-header">
-          <h4 className="booking-name">{booking.name}</h4>
-          <span className="booking-status">
-            {isCompleted ? '✅ Completed' : '🟡 Pending'}
-          </span>
-        </div>
-        <div className="booking-details">
-          <p><span className="detail-label">📱 Mobile:</span> {booking.mobile}</p>
-          <p><span className="detail-label">⏰ Time:</span> {booking.eventTime}</p>
-          <p><span className="detail-label">📍 Place:</span> {booking.eventPlace}</p>
-          <p><span className="detail-label">🍽️ Plates:</span> {booking.plates}</p>
-        </div>
+  // Define your preferred order for categories
+  const categoryOrder = [
+    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
+    'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
+    'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
+    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
+    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams',
+    'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
+    'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
+    'crabItems', 'nonVegBiryanis', 'customItems'
+  ];
 
-        {expandedIndex === index && (
-          <div className="booking-expanded">
-            <div className="items-section">
-              <h4 className="section-title">Selected Items</h4>
-              <div className="items-grid">
-                {Object.entries(booking.selectedItems || {}).map(([category, items]) => {
-                  const itemsArray = Array.isArray(items) ? items :
-                    (typeof items === 'object' ? Object.keys(items).filter(item => items[item]) : []);
+  const lowerCaseCategoryOrder = categoryOrder.map(cat => cat.toLowerCase());
 
-                  if (itemsArray.length > 0) {
-                    return (
-                      <div key={category} className="category-group">
-                        <h5 className="category-title">{category.charAt(0).toUpperCase() + category.slice(1)}</h5>
-                        <ul className="item-list">
-                          {itemsArray.map((item, i) => (
-                            <li key={i}>
-                              {typeof item === 'string' ? item : `${item.name} (${item.count})`}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    );
-                  }
-                  return null;
-                })}
-              </div>
-            </div>
+  return (
+    <div
+      key={booking.key}
+      className={`booking-card ${isCompleted ? 'completed' : ''} ${
+        expandedIndex === index ? 'expanded' : ''
+      }`}
+      onClick={() => setExpandedIndex(index === expandedIndex ? null : index)}
+    >
+      <div className="booking-header">
+        <h4 className="booking-name">{booking.name}</h4>
+        <span className="booking-status">
+          {isCompleted ? '✅ Completed' : '🟡 Pending'}
+        </span>
+      </div>
 
-            <div className="action-buttons">
-              <button
-                className="action-btn email-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  sendThankYouEmail(booking);
-                }}
-              >
-                ✉️ Send Thank You
-              </button>
-              <button
-                className="action-btn pdf-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  generatePdf(booking);
-                }}
-              >
-                📄 Generate PDF
-              </button>
-              <button
-                className={`action-btn complete-btn ${
-                  isCompleted ? 'completed' : ''
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  markAsCompleted(booking);
-                }}
-              >
-                {isCompleted ? '✔️ Order Completed' : '✓ Mark as Completed'}
-              </button>
+      <div className="booking-details">
+        <p><span className="detail-label">📱 Mobile:</span> {booking.mobile}</p>
+        <p><span className="detail-label">⏰ Time:</span> {booking.eventTime}</p>
+        <p><span className="detail-label">📍 Place:</span> {booking.eventPlace}</p>
+        <p><span className="detail-label">🍽️ Plates:</span> {booking.plates}</p>
+        {notesMap[booking.key] && (
+  <p><span className="detail-label">📝 Notes:</span> {notesMap[booking.key]}</p>
+)}
+      </div>
+
+      {expandedIndex === index && (
+        <div className="booking-expanded">
+          <div className="items-section">
+            <div className="note-section">
+  <label htmlFor={`note-${booking.key}`} className="note-label">📝 Admin Notes:</label>
+  <textarea
+  id={`note-${booking.key}`}
+  className="note-textarea"
+  value={notesMap[booking.key] || ''}
+  onClick={(e) => e.stopPropagation()} // <- This stops bubbling
+  onChange={(e) =>
+    setNotesMap((prev) => ({
+      ...prev,
+      [booking.key]: e.target.value,
+    }))
+  }
+  placeholder="Write any admin-specific notes here..."
+/>
+
+  <button
+  className="note-save-btn mb-3"
+  onClick={(e) => {
+    e.stopPropagation(); // Prevent card from collapsing
+    saveNote(booking.key, notesMap[booking.key] || '');
+  }}
+>
+  ✅ Save Note
+</button>
+
+</div>
+            <h4 className="section-title">Selected Items</h4>
+            <div className="items-grid">
+              {(() => {
+                const selectedItems = booking.selectedItems || {};
+
+                // Sort categories by the preferred order
+                const sortedCategories = Object.keys(selectedItems).sort((a, b) => {
+                  const indexA = lowerCaseCategoryOrder.indexOf(a.toLowerCase());
+                  const indexB = lowerCaseCategoryOrder.indexOf(b.toLowerCase());
+                  return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+                });
+
+                return sortedCategories.map((category) => {
+                  const items = selectedItems[category];
+                  const itemsArray = Array.isArray(items)
+                    ? items
+                    : typeof items === 'object'
+                    ? Object.keys(items).filter(item => items[item])
+                    : [];
+
+                  if (!itemsArray.length) return null;
+
+                  return (
+                    <div key={category} className="category-group">
+                      <h5 className="category-title">
+                        {category.replace(/([a-z])([A-Z])/g, '$1 $2')
+                                 .replace(/\b\w/g, char => char.toUpperCase())}
+                      </h5>
+                      <ul className="item-list">
+                        {itemsArray.map((item, i) => (
+                          <li key={i}>
+                            {typeof item === 'string'
+                              ? item
+                              : `${item.name} (${item.count})`}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </div>
-        )}
-      </div>
-    );
-  };
+
+          <div className="action-buttons">
+            <button
+              className="action-btn pdf-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                generatePdf(booking);
+              }}
+            >
+              📄 Generate PDF
+            </button>
+            <button
+              className="action-btn email-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                sendThankYouEmail(booking);
+              }}
+            >
+              ✉️ Send Thank You
+            </button>
+            
+            <button
+              className={`action-btn complete-btn ${isCompleted ? 'completed' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                markAsCompleted(booking);
+              }}
+            >
+              {isCompleted ? '✔️ Order Completed' : '✓ Mark as Completed'}
+            </button>
+          </div>
+          
+
+        </div>
+      )}
+    </div>
+  );
+};
+
 
   return (
     <div className="orders-page">
@@ -435,41 +579,74 @@ function OrdersPage() {
         />
       </div>
 
-      <div className="date-range-selector">
-        <h3>Download Bookings as CSV</h3>
-        {/* Date Range Selector */}
-        <div className="date-inputs">
-          <label htmlFor="startDate">Start Date:</label>
-          <input
-            type="date"
-            id="startDate"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="date-input-field"
-          />
-          <label htmlFor="endDate">End Date:</label>
-          <input
-            type="date"
-            id="endDate"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="date-input-field"
-          />
-          <button onClick={() => handleDownloadDateRange(startDate, endDate, 'Custom_Range')} className="download-range-btn">
-            ⬇️ Download Custom Range CSV
-          </button>
-        </div>
+      <div style={{ textAlign: 'center', margin: '2rem 0' }}>
+  <button
+    onClick={() => setShowDateRangePopup(true)}
+    className="download-range-btn"
+  >
+    ⬇️ Download Excel
+  </button>
+</div>
 
-        {/* New buttons for Current and Last Month */}
-        <div className="quick-download-buttons">
-          <button onClick={handleDownloadCurrentMonth} className="download-range-btn">
-            ⬇️ Download Current Month CSV
-          </button>
-          <button onClick={handleDownloadLastMonth} className="download-range-btn">
-            ⬇️ Download Last Month CSV
-          </button>
-        </div>
+{showDateRangePopup && (
+  <div className="modal-overlay" onClick={() => setShowDateRangePopup(false)}>
+    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <h3>Download Bookings as CSV</h3>
+      <div className="date-inputs">
+        <label htmlFor="startDate">Start Date:</label>
+        <input
+          type="date"
+          id="startDate"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="date-input-field"
+        />
+        <label htmlFor="endDate">End Date:</label>
+        <input
+          type="date"
+          id="endDate"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="date-input-field"
+        />
+        <button
+          onClick={() => {
+            handleDownloadDateRange(startDate, endDate, 'Custom_Range');
+            setShowDateRangePopup(false);
+          }}
+          className="download-range-btn"
+        >
+          ⬇️ Download Custom Range CSV
+        </button>
       </div>
+
+      <div className="quick-download-buttons">
+        <button
+          onClick={() => {
+            handleDownloadCurrentMonth();
+            setShowDateRangePopup(false);
+          }}
+          className="download-range-btn"
+        >
+          ⬇️ Download Current Month CSV
+        </button>
+        <button
+          onClick={() => {
+            handleDownloadLastMonth();
+            setShowDateRangePopup(false);
+          }}
+          className="download-range-btn"
+        >
+          ⬇️ Download Last Month CSV
+        </button>
+      </div>
+      <button className="close-modal-btn" onClick={() => setShowDateRangePopup(false)}>
+        ❌ Close
+      </button>
+    </div>
+  </div>
+)}
+
 
       <div className="bookings-container">
         <h2 className="bookings-title">
@@ -643,77 +820,77 @@ function OrdersPage() {
 
         /* --- Date Range Selector Styling --- */
         .date-range-selector {
-          background: #ffffff;
-          border-radius: 16px;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-          padding: 2rem;
-          margin-bottom: 3rem;
-          text-align: center;
-        }
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  padding: 1.2rem 1rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
 
-        .date-range-selector h3 {
-          font-size: 1.6rem;
-          color: #2c3e50;
-          margin-bottom: 1.5rem;
-          font-weight: 600;
-        }
+.date-range-selector h3 {
+  font-size: 1.3rem;
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
 
-        .date-inputs, .quick-download-buttons {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          gap: 1.5rem;
-          flex-wrap: wrap;
-          margin-bottom: 1rem; /* Space between custom range and quick buttons */
-        }
-        
-        .quick-download-buttons {
-            margin-top: 1.5rem;
-        }
+.date-inputs,
+.quick-download-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
 
+.quick-download-buttons {
+  margin-top: 1rem;
+}
 
-        .date-inputs label {
-          font-weight: 600;
-          color: #555;
-          font-size: 1.1em;
-        }
+.date-inputs label {
+  font-weight: 500;
+  color: #555;
+  font-size: 0.95em;
+}
 
-        .date-input-field {
-          padding: 0.8rem 1rem;
-          border: 1px solid #ccd6e0;
-          border-radius: 8px;
-          font-size: 1rem;
-          color: #34495e;
-          outline: none;
-          transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
+.date-input-field {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  border: 1px solid #ccd6e0;
+  border-radius: 6px;
+  color: #34495e;
+  outline: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
 
-        .date-input-field:focus {
-          border-color: #4a90e2;
-          box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
-        }
+.date-input-field:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+}
 
-        .download-range-btn {
-          background: #27ae60;
-          color: white;
-          padding: 0.8rem 1.5rem;
-          border: none;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          font-size: 1rem;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);
-        }
+.download-range-btn {
+  background: #27ae60;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 3px 8px rgba(39, 174, 96, 0.25);
+}
 
-        .download-range-btn:hover {
-          background: #229954;
-          transform: translateY(-2px);
-          box-shadow: 0 6px 15px rgba(39, 174, 96, 0.4);
-        }
+.download-range-btn:hover {
+  background: #229954;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 12px rgba(39, 174, 96, 0.35);
+}
         /* --- End Date Range Selector Styling --- */
 
 
@@ -895,25 +1072,27 @@ function OrdersPage() {
 
         /* Action Buttons */
         .action-buttons {
-          display: flex;
-          gap: 1rem;
-          margin-top: 1.5rem;
-        }
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
 
         .action-btn {
-          flex: 1;
-          padding: 0.8rem 1rem;
-          border: none;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-          font-size: 1rem;
-        }
+  flex: 1 1 30%; /* Allows buttons to shrink if needed but maintain horizontal flow */
+  min-width: 120px;
+  padding: 0.8rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
 
         .email-btn {
           background: #4a90e2;
@@ -985,11 +1164,106 @@ function OrdersPage() {
           .bookings-title {
             font-size: 1.5rem;
           }
-          .date-inputs, .quick-download-buttons {
-            flex-direction: column;
-            gap: 1rem;
-          }
+          .date-inputs,
+  .quick-download-buttons {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .date-input-field {
+    width: 100%;
+  }
+
+  .download-range-btn {
+    width: 100%;
+    justify-content: center;
+  }
         }
+  .note-section {
+  margin-top: 1.2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.note-label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.note-textarea {
+  padding: 0.7rem;
+  font-size: 0.95rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  resize: vertical;
+  min-height: 80px;
+  background-color: #fefefe;
+  margin-bottom: 0.6rem;
+  font-family: inherit;
+  color: #333;
+}
+
+.note-save-btn {
+  align-self: flex-start;
+  background: #2980b9;
+  color: white;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.note-save-btn:hover {
+  background: #2471a3;
+}
+  .modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-content {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.close-modal-btn {
+  background: #e74c3c;
+  color: white;
+  padding: 0.5rem 1.2rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1.5rem;
+  display: block;
+  width: 100%;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.close-modal-btn:hover {
+  background: #c0392b;
+}
+
+
+          
       `}</style>
     </div>
   );
