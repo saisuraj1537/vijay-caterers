@@ -6,7 +6,6 @@ import { database } from '../firebase';
 import emailjs from 'emailjs-com';
 import html2pdf from 'html2pdf.js';
 
-
 function OrdersPage() {
   const [eventDates, setEventDates] = useState([]);
   const [allBookings, setAllBookings] = useState([]);
@@ -18,7 +17,7 @@ function OrdersPage() {
   useEffect(() => {
     const bookingsRef = ref(database, 'finalBookings');
     onValue(bookingsRef, (snapshot) => {
-      const data = snapshot.val();
+      const data = snapshot.val() || {};
       const dates = [];
       const bookingsList = [];
 
@@ -217,8 +216,6 @@ const generatePdf = (booking) => {
     })
     .join('');
 
-    
-
   // HTML structure of the PDF
   const content = `
   <div style="font-family: 'Georgia', serif; padding: 30px; color: #3c3c3c; background-color: #fffbe6; border: 10px solid #f5e1a4;">
@@ -270,8 +267,6 @@ const generatePdf = (booking) => {
 
   html2pdf().from(content).save(filename);
 };
-
- 
 
 
 

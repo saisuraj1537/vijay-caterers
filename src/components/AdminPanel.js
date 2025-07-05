@@ -6,7 +6,9 @@ import emailjs from 'emailjs-com';
 function AdminPanel() {
   const [bookings, setBookings] = useState([]);
   const [userNames, setUserNames] = useState({});
+  const [sendingEmailFor, setSendingEmailFor] = useState(null);
   const [expandedCustomer, setExpandedCustomer] = useState(null);
+  const [filter, setFilter] = useState('upcoming'); // 'upcoming' or 'past'
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,14 +21,21 @@ function AdminPanel() {
   }, []);
 
   const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  if (isNaN(date)) return dateString; // fallback if date is not valid
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${day}-${month}-${year}`;
-};
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date)) return dateString;
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  const isPastDate = (dateStr) => {
+    const today = new Date();
+    const date = new Date(dateStr);
+    if (isNaN(date)) return false;
+    return date < new Date(today.setHours(0, 0, 0, 0));
+  };
 
   const fetchUserNames = () => {
     const db = getDatabase();
@@ -43,15 +52,20 @@ function AdminPanel() {
       const loaded = [];
       Object.entries(data).forEach(([userMobile, customers]) =>
         Object.entries(customers).forEach(([key, value]) =>
-          loaded.push({ userMobile, customerKey: key, details: value.details, items: value.items })
+          loaded.push({ userMobile, customerKey: key, details: value.details || {}, items: value.items || {} })
         )
       );
-      setBookings(loaded);
+      const sorted = loaded.sort((a, b) => new Date(a.details.eventDate) - new Date(b.details.eventDate));
+      setBookings(sorted);
     });
   };
 
   const handleDelete = (userMobile, customerKey) => {
-    remove(ref(getDatabase(), `finalBookings/${userMobile}/${customerKey}`));
+    const confirmed = window.confirm('Are you sure you want to delete this booking?');
+    if (confirmed) {
+      remove(ref(getDatabase(), `finalBookings/${userMobile}/${customerKey}`));
+      alert('🗑️ Booking deleted.');
+    }
   };
 
   const handleEdit = booking => {
@@ -65,6 +79,7 @@ function AdminPanel() {
   };
 
   const sendEmail = async booking => {
+    setSendingEmailFor(booking.customerKey);
     const mapping = Object.entries(booking.items)
       .filter(([, list]) => Array.isArray(list) && list.length > 0)
       .map(([category, list]) => `${category}: ${list.join(', ')}`)
@@ -92,38 +107,49 @@ function AdminPanel() {
     } catch (err) {
       console.error(err);
       alert('❌ Failed to send email.');
+    } finally {
+      setSendingEmailFor(null);
     }
   };
+
+  const filteredBookings = bookings.filter(b =>
+    filter === 'past' ? isPastDate(b.details.eventDate) : !isPastDate(b.details.eventDate)
+  );
 
   return (
     <div className="admin-panel-container">
       <header className="admin-header">
         <h1 className="admin-title">Admin Dashboard</h1>
         <p className="admin-subtitle">Manage customer bookings</p>
+        <div className="filter-buttons">
+          <button className={`filter-btn ${filter === 'upcoming' ? 'active' : ''}`} onClick={() => setFilter('upcoming')}>Upcoming Events</button>
+          <button className={`filter-btn ${filter === 'past' ? 'active' : ''}`} onClick={() => setFilter('past')}>Past Events</button>
+        </div>
       </header>
 
       <main className="admin-content">
-        {bookings.length === 0 ? (
+        {filteredBookings.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">📭</div>
-            <h3>No bookings found</h3>
-            <p>When customers make bookings, they'll appear here.</p>
+            <h3>No {filter} bookings</h3>
+            <p>{filter === 'upcoming' ? 'Future' : 'Past'} events will be shown here.</p>
           </div>
         ) : (
           <div className="booking-grid">
-            {bookings.map(bk => {
+            {filteredBookings.map(bk => {
               const { userMobile, customerKey, details, items } = bk;
               const takenBy = userNames[userMobile] || userMobile;
               const isExpanded = expandedCustomer === customerKey;
-              const itemCount = Object.values(items)
-                .filter(Array.isArray)
-                .reduce((sum, list) => sum + list.length, 0);
+              const isPast = isPastDate(details.eventDate);
+              const itemCount = items && typeof items === 'object'
+                ? Object.values(items).filter(Array.isArray).reduce((sum, list) => sum + list.length, 0)
+                : 0;
 
               return (
                 <div
                   key={customerKey}
-                  className={`booking-card ${isExpanded ? 'expanded' : ''}`}
-                  onClick={() => toggleCard(customerKey)}
+                  className={`booking-card ${isExpanded ? 'expanded' : ''} ${isPast ? 'past-event' : ''}`}
+                  onClick={() => !isPast && toggleCard(customerKey)}
                 >
                   <div className="booking-card-header">
                     <h3 className="customer-name">{details.name}</h3>
@@ -138,7 +164,6 @@ function AdminPanel() {
                     <div className="detail-row">
                       <span className="detail-label">Event Date:</span>
                       <span className="detail-value">{formatDate(details.eventDate)}</span>
-
                     </div>
                     <div className="detail-row">
                       <span className="detail-label">Plates:</span>
@@ -150,49 +175,32 @@ function AdminPanel() {
                     </div>
                   </div>
 
-                  {isExpanded && (
+                  {isExpanded && !isPast && (
                     <div className="booking-expanded">
                       <div className="items-section">
                         <h4 className="section-title">Selected Items</h4>
                         <div className="items-grid">
-                          {[
-  "sweets", "juices", "veg snacks", "hots", "rotis", "kurma curries", "special greavy curryis",
-  "special rice items", "veg dum biryani", "dal items", "veg fry items", "liquid items", "roti chutneys",
-  "avakayalu", "powders", "curds", "papads", "chat items", "chinese", "italian snacks",
-  "south indian tiffin items", "fruits", "ice creams", "chicken snacks", "prawn snacks", "egg snacks",
-  "sea food", "mutton curries", "egg", "prawns", "chicken curries", "crabs", "non veg biryanis"
-].map(cat => {
-  const list = items[cat];
-  return Array.isArray(list) && list.length > 0 && (
-    <div key={cat} className="category-group">
-      <h5 className="category-title">{cat.charAt(0).toUpperCase() + cat.slice(1)}</h5>
-      <ul className="item-list">
-        {list.map((item, i) => <li key={i}>{item}</li>)}
-      </ul>
-    </div>
-  );
-})}
-
+                          {Object.entries(items).map(([cat, list]) =>
+                            Array.isArray(list) && list.length > 0 && (
+                              <div key={cat} className="category-group">
+                                <h5 className="category-title">{cat.charAt(0).toUpperCase() + cat.slice(1)}</h5>
+                                <ul className="item-list">
+                                  {list.map((item, i) => <li key={i}>{item}</li>)}
+                                </ul>
+                              </div>
+                            )
+                          )}
                         </div>
                       </div>
 
                       <div className="action-buttons">
-                        <button 
-                          className="btn btn-edit"
-                          onClick={e => { e.stopPropagation(); handleEdit(bk); }}
-                        >
+                        <button className="btn btn-edit" onClick={e => { e.stopPropagation(); handleEdit(bk); }}>
                           Edit Booking
                         </button>
-                        <button 
-                          className="btn btn-email"
-                          onClick={e => { e.stopPropagation(); sendEmail(bk); }}
-                        >
-                          Send Confirmation
+                        <button className="btn btn-email" onClick={e => { e.stopPropagation(); sendEmail(bk); }} disabled={sendingEmailFor === customerKey}>
+                          {sendingEmailFor === customerKey ? <span className="spinner"></span> : 'Send Confirmation'}
                         </button>
-                        <button 
-                          className="btn btn-delete"
-                          onClick={e => { e.stopPropagation(); handleDelete(userMobile, customerKey); }}
-                        >
+                        <button className="btn btn-delete" onClick={e => { e.stopPropagation(); handleDelete(userMobile, customerKey); }}>
                           Delete Booking
                         </button>
                       </div>
@@ -205,7 +213,55 @@ function AdminPanel() {
         )}
       </main>
 
-      <style >{`
+      <style>{`
+        .filter-buttons {
+          margin-top: 1rem;
+          display: flex;
+          gap: 1rem;
+        }
+
+        .filter-btn {
+          padding: 0.5rem 1rem;
+          font-weight: 600;
+          border: 1px solid #ccc;
+          background-color: white;
+          border-radius: 5px;
+          cursor: pointer;
+          transition: 0.3s ease;
+        }
+
+        .filter-btn.active {
+          background-color: #3498db;
+          color: white;
+          border-color: #3498db;
+        }
+
+        .filter-btn:hover {
+          background-color: #ecf0f1;
+        }
+
+        
+
+        .past-event {
+          opacity: 0.5;
+          pointer-events: none;
+          background-color: #f0f0f0 !important;
+        }
+        .spinner {
+          border: 3px solid rgba(255, 255, 255, 0.3);
+          border-top: 3px solid #2c3e50;
+          border-radius: 50%;
+          width: 16px;
+          height: 16px;
+          animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        /* Keep rest of your CSS below */
+
+
+
         .admin-panel-container {
           max-width: 1200px;
           margin: 0 auto;
@@ -389,11 +445,11 @@ function AdminPanel() {
         }
 
         .action-buttons {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 0.75rem;
-          margin-top: 1.5rem;
-        }
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
 
         .btn {
           padding: 0.6rem 1rem;
@@ -406,6 +462,7 @@ function AdminPanel() {
           display: flex;
           align-items: center;
           justify-content: center;
+          min-height:36px;
         }
 
         .btn-edit {
@@ -437,8 +494,9 @@ function AdminPanel() {
 
         @media (min-width: 768px) {
           .action-buttons {
-            grid-template-columns: repeat(3, 1fr);
-          }
+    flex-direction: row;
+    justify-content: space-between;
+  }
         }
       `}</style>
     </div>
