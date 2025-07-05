@@ -10,7 +10,6 @@ function FinalSelectItemsPage() {
   const [nonVegItemsGrouped, setNonVegItemsGrouped] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
-  const [customItem, setCustomItem] = useState('');
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
@@ -20,12 +19,11 @@ function FinalSelectItemsPage() {
   const userMobile = booking?.userMobile || localStorage.getItem('loggedInMobile');
   const customerName = booking?.customerName;
 
-  // 🔤 Custom order
   const customCategoryOrder = [
     'sweets', 'juices', 'vegSnaks', 'hots', 'rotis',
     'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
     'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
-    'avakayalu', 'powders', 'curds', 'papads','salads', 'chatItems', 'chineseList',
+    'avakayalu', 'powders', 'curds', 'papads', 'salads', 'chatItems', 'chineseList',
     'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams',
     'chickenSnacks', 'prawnsSnacks', 'eggSnacks', 'seaFoods',
     'muttonCurries', 'eggItems', 'prawnItems', 'chickenCurries',
@@ -91,32 +89,45 @@ function FinalSelectItemsPage() {
     setFilter(category);
   };
 
+  const hasMatchingItem = () => {
+    const lowerSearch = searchTerm.toLowerCase();
+
+    const matches = (groupedItems) =>
+      Object.entries(groupedItems).some(([category, items]) =>
+        category.toLowerCase().includes(lowerSearch) ||
+        Object.values(items).some(item => item.toLowerCase().includes(lowerSearch))
+      );
+
+    if (filter === 'veg') return matches(vegItemsGrouped);
+    if (filter === 'nonveg') return matches(nonVegItemsGrouped);
+    return matches(vegItemsGrouped) || matches(nonVegItemsGrouped);
+  };
+
   const addCustomItem = () => {
-    if (!customItem.trim()) return;
+    const trimmedItem = searchTerm.trim();
+    if (!trimmedItem) return;
 
     const db = getDatabase();
     const customItemsRef = ref(db, `finalBookings/${userMobile}/${customerName}/items/customItems`);
 
     onValue(customItemsRef, (snapshot) => {
       const currentItems = snapshot.val() || {};
-      const exists = Object.values(currentItems).some(item => item.toLowerCase() === customItem.trim().toLowerCase());
+      const exists = Object.values(currentItems).some(item => item.toLowerCase() === trimmedItem.toLowerCase());
 
       if (exists) return;
 
       const newItemKey = Object.keys(currentItems).length;
-      const updatedItems = { ...currentItems, [newItemKey]: customItem.trim() };
+      const updatedItems = { ...currentItems, [newItemKey]: trimmedItem };
 
       set(customItemsRef, updatedItems)
         .then(() => {
-          setCustomItem('');
+          setSearchTerm('');
           alert("Custom item added successfully!");
         })
         .catch((error) => {
           console.error("Error adding custom item:", error);
         });
-    }, {
-      onlyOnce: true
-    });
+    }, { onlyOnce: true });
   };
 
   const renderGroupedItems = (groupedItems) => {
@@ -224,7 +235,7 @@ function FinalSelectItemsPage() {
         </div>
       ) : (
         <>
-          {/* Search & Filter */}
+          {/* Combined Search + Filter + Add Custom */}
           <div style={{
             position: 'sticky',
             top: 80,
@@ -236,7 +247,7 @@ function FinalSelectItemsPage() {
           }}>
             <input
               type="text"
-              placeholder="Search item or category..."
+              placeholder="Search or add custom item..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -277,39 +288,25 @@ function FinalSelectItemsPage() {
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Custom Item Input */}
-          <div style={{ marginBottom: '16px' }}>
-            <input
-              type="text"
-              value={customItem}
-              onChange={(e) => setCustomItem(e.target.value)}
-              placeholder="Add custom item..."
-              style={{
-                padding: '12px 14px',
-                width: '100%',
-                marginBottom: '8px',
-                borderRadius: '10px',
-                border: '1px solid #ccc',
-                fontSize: '16px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-              }}
-            />
-            <button
-              onClick={addCustomItem}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#2b79b5',
-                color: '#fff',
-                borderRadius: '20px',
-                border: 'none',
-                fontSize: '14px',
-                cursor: 'pointer',
-              }}
-            >
-              Add Custom Item
-            </button>
+            {!hasMatchingItem() && searchTerm.trim() !== '' && (
+              <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                <button
+                  onClick={addCustomItem}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#2b79b5',
+                    color: '#fff',
+                    borderRadius: '20px',
+                    border: 'none',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Add "{searchTerm}" as custom item
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Render Filtered Items */}

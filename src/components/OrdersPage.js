@@ -275,49 +275,73 @@ const saveNote = (bookingKey, note) => {
     .join('');
 
   const content = `
-    <div style="font-family: 'Georgia', serif; padding: 30px; color: #3c3c3c; background-color: #fffbe6; border: 10px solid #f5e1a4;">
-      <div style="text-align: center; margin-bottom: 25px;">
-        <h1 style="font-size: 24px; color: #b8860b;">Vijay Caterers</h1>
-        <p style="font-style: italic; color: #555;">"Elevate your event with our exceptional catering services"</p>
-      </div>
+  <div style="font-family: 'Georgia', serif; padding: 30px; color: #3c3c3c; background-color: #fffbe6; border: 10px solid #f5e1a4; box-sizing: border-box; height : 100%;">
 
-      <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: 25px;">
+      <h1 style="font-size: 24px; color: #b8860b;">Vijay Caterers</h1>
+      <p style="font-style: italic; color: #555;">"Elevate your event with our exceptional catering services"</p>
+    </div>
 
-      <div style="margin-bottom: 25px;">
-        <h2 style="color: #8B4513; font-size: 18px; margin-bottom: 12px;">Order Details</h2>
-        <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-          <div style="flex: 1 1 45%;">
-            <p><strong>Name:</strong> ${booking.name}</p>
-            <p><strong>Mobile:</strong> ${booking.mobile}</p>
-            <p><strong>Email:</strong> ${booking.email}</p>
-          </div>
-          <div style="flex: 1 1 45%;">
-            <p><strong>Event Date:</strong> ${booking.date}</p>
-            <p><strong>Event Time:</strong> ${booking.eventTime}</p>
-            <p><strong>Event Place:</strong> ${booking.eventPlace}</p>
-            <p><strong>No. of Plates:</strong> ${booking.plates}</p>
-          </div>
+    <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+
+    <!-- Booking Info -->
+    <div style="margin-bottom: 25px;">
+      <h2 style="color: #8B4513; font-size: 18px; margin-bottom: 12px;">Order Details</h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+        <div style="flex: 1 1 45%;">
+          <p><strong>Name:</strong> ${booking.name}</p>
+          <p><strong>Mobile:</strong> ${booking.mobile}</p>
+          <p><strong>Email:</strong> ${booking.email}</p>
         </div>
-      </div>
-
-      <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
-
-      <div style="margin-bottom: 30px;">
-        <h2 style="color: #8B4513; font-size: 18px;">Selected Items</h2>
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-          ${itemsHtml}
+        <div style="flex: 1 1 45%;">
+          <p><strong>Event Date:</strong> ${booking.date}</p>
+          <p><strong>Event Time:</strong> ${booking.eventTime}</p>
+          <p><strong>Event Place:</strong> ${booking.eventPlace}</p>
+          <p><strong>No. of Plates:</strong> ${booking.plates}</p>
         </div>
-      </div>
-
-      <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777;">
-        <p>📍 Hyderabad, Telangana</p>
-        <p>📞 9866973747 / 9959500833</p>
-        <p>📧 <a href="mailto:darwaen1211@gmail.com" style="color: #b8860b;">darwaen1211@gmail.com</a></p>
-        <p>📸 Instagram: <a href="https://instagram.com/vijaycaterers_" style="color: #b8860b;">@vijaycaterers_</a></p>
-        <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
       </div>
     </div>
-  `;
+
+    <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+
+    <!-- Selected Items -->
+    <div style="margin-bottom: 30px;">
+      <h2 style="color: #8B4513; font-size: 18px;">Selected Items</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+        ${itemsHtml}
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 10px;">
+        <span>📍 Kukatpally, Hyderabad, Telangana</span>
+        <span>📞 9866937747 / 9959500833 / 9676967747</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px;">
+        <span>📧 <a href="mailto:vijaycaterers2005@gmail.com" style="color: #b8860b;">vijaycaterers2005@gmail.com</a></span>
+        <span>📸 Instagram: <a href="https://www.instagram.com/vijaycaterers_?igsh=Y2p3NGNmdmhhOXU%3D&utm_source=qr"  style="color: #b8860b;">@vijaycaterers_</a></span>
+      </div>
+      <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
+    </div>
+  </div>
+
+  <!-- Terms and Conditions Page -->
+  <div style="page-break-before: always; padding: 40px; font-family: 'Georgia', serif; background-color: #fffbe6; border: 10px solid #f5e1a4; box-sizing: border-box;">
+    <h2 style="text-align: center; color: #8B4513;">Terms and Conditions</h2>
+    <ul style="margin-top: 25px; color: #444; font-size: 14px; line-height: 1.7;">
+      <li>Payment can be made by cash, UPI, bank transfer, or cheque (cheque clearance is mandatory before event).</li>
+      <li>20% advance on the day of booking, 70% before 1 week of the party, and remaining balance to be paid after the event.</li>
+      <li>Final menu must be confirmed at least 5 days in advance.</li>
+      <li>Extra plates will be charged separately.</li>
+      <li>If the party postpones or cancels the event, 10% of the total amount will be charged.</li>
+    </ul>
+    <p style="margin-top: 30px; text-align: center; font-style: italic; color: #777;">Thank you for choosing Vijay Caterers!</p>
+  </div>
+`;
+
+
 
   html2pdf().from(content).save(filename);
 };
@@ -579,7 +603,7 @@ const saveNote = (bookingKey, note) => {
         />
       </div>
 
-      <div style={{ textAlign: 'center', margin: '2rem 0' }}>
+      <div style={{  display: 'flex', justifyContent: 'flex-end', margin: '2rem 0' }}>
   <button
     onClick={() => setShowDateRangePopup(true)}
     className="download-range-btn"

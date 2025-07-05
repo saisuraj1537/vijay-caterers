@@ -10,7 +10,6 @@ function SelectItemsPage() {
   const [nonVegItemsGrouped, setNonVegItemsGrouped] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
-  const [customItem, setCustomItem] = useState('');
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
@@ -20,12 +19,11 @@ function SelectItemsPage() {
   const userMobile = booking?.userMobile || localStorage.getItem('loggedInMobile');
   const customerName = booking?.customerName;
 
-  // ✅ Define custom display order of categories
   const customCategoryOrder = [
     'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
     'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
     'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
-    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
+    'avakayalu', 'powders', 'curds', 'papads', 'salads', 'chatItems', 'chineseList',
     'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams',
     'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
     'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
@@ -91,24 +89,39 @@ function SelectItemsPage() {
     setFilter(category);
   };
 
+  const hasMatchingItem = () => {
+    const lowerSearch = searchTerm.toLowerCase();
+
+    const matches = (groupedItems) =>
+      Object.entries(groupedItems).some(([category, items]) =>
+        category.toLowerCase().includes(lowerSearch) ||
+        Object.values(items).some(item => item.toLowerCase().includes(lowerSearch))
+      );
+
+    if (filter === 'veg') return matches(vegItemsGrouped);
+    if (filter === 'nonveg') return matches(nonVegItemsGrouped);
+    return matches(vegItemsGrouped) || matches(nonVegItemsGrouped);
+  };
+
   const addCustomItem = () => {
-    if (!customItem.trim()) return;
+    const trimmedItem = searchTerm.trim();
+    if (!trimmedItem) return;
 
     const db = getDatabase();
     const customItemsRef = ref(db, `bookings/${userMobile}/${customerName}/items/customItems`);
 
     onValue(customItemsRef, (snapshot) => {
       const currentItems = snapshot.val() || {};
-      const exists = Object.values(currentItems).some(item => item.toLowerCase() === customItem.trim().toLowerCase());
+      const exists = Object.values(currentItems).some(item => item.toLowerCase() === trimmedItem.toLowerCase());
 
       if (exists) return;
 
       const newItemKey = Object.keys(currentItems).length;
-      const updatedItems = { ...currentItems, [newItemKey]: customItem.trim() };
+      const updatedItems = { ...currentItems, [newItemKey]: trimmedItem };
 
       set(customItemsRef, updatedItems)
         .then(() => {
-          setCustomItem('');
+          setSearchTerm('');
           alert("Custom item added successfully!");
         })
         .catch((error) => {
@@ -117,87 +130,103 @@ function SelectItemsPage() {
     }, { onlyOnce: true });
   };
 
-  // ✅ Apply custom sorting logic here
   const renderGroupedItems = (groupedItems) => {
-    const lowerSearch = searchTerm.toLowerCase();
+  const lowerSearch = searchTerm.toLowerCase();
 
-    const sortedEntries = Object.entries(groupedItems).sort((a, b) => {
-      const indexA = customCategoryOrder.indexOf(a[0]);
-      const indexB = customCategoryOrder.indexOf(b[0]);
+  const sortedEntries = Object.entries(groupedItems).sort((a, b) => {
+    const indexA = customCategoryOrder.indexOf(a[0]);
+    const indexB = customCategoryOrder.indexOf(b[0]);
 
-      if (indexA === -1 && indexB === -1) return a[0].localeCompare(b[0]);
-      if (indexA === -1) return 1;
-      if (indexB === -1) return -1;
-      return indexA - indexB;
-    });
+    if (indexA === -1 && indexB === -1) return a[0].localeCompare(b[0]);
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
 
-    return sortedEntries.map(([category, itemsObj]) => {
-      const categoryMatch = category.toLowerCase().includes(lowerSearch);
-      const filteredItems = Object.values(itemsObj).filter((item) =>
-        item.toLowerCase().includes(lowerSearch)
-      );
+  return sortedEntries.map(([category, itemsObj]) => {
+    const categoryMatch = category.toLowerCase().includes(lowerSearch);
+    let items = Object.values(itemsObj).filter((item) =>
+      item.toLowerCase().includes(lowerSearch)
+    );
 
-      if (!categoryMatch && filteredItems.length === 0) return null;
+    if (!categoryMatch && items.length === 0) return null;
 
-      const itemsToDisplay = categoryMatch ? Object.values(itemsObj) : filteredItems;
-      const selectedCount = selectedItems[category]?.length || 0;
+    const selectedCount = selectedItems[category]?.length || 0;
 
-      return (
-        <div key={category} style={{ marginBottom: '24px' }}>
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: '600',
-            color: '#2b79b5',
-            marginBottom: '12px',
-            borderBottom: '2px solid #e0e0e0',
-            paddingBottom: '4px',
-          }}>
-            {category} ({selectedCount})
-          </h3>
+    // 🟡 SPECIAL LOGIC FOR SWEETS CATEGORY
+    const highlightedItem = "Angoor Jamun – అంగూర్ జామున్";
+    if (category === 'sweets') {
+      const index = items.indexOf(highlightedItem);
+      if (index !== -1) {
+        items.splice(index, 1); // remove it from its position
+        items.unshift(highlightedItem); // add to the top
+      }
+    }
 
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '10px',
-          }}>
-            {itemsToDisplay.map((item) => {
-              const isChecked = selectedItems[category]?.includes(item) || false;
+    return (
+      <div key={category} style={{ marginBottom: '24px' }}>
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: '600',
+          color: '#2b79b5',
+          marginBottom: '12px',
+          borderBottom: '2px solid #e0e0e0',
+          paddingBottom: '4px',
+        }}>
+          {category} ({selectedCount})
+        </h3>
 
-              return (
-                <label
-                  key={item}
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '10px',
+        }}>
+          {items.map((item) => {
+            const isChecked = selectedItems[category]?.includes(item) || false;
+
+            // 🔵 Apply special highlight for "Angoor Jamun – అంగూర్ జామున్"
+            const isHighlight = category === 'sweets' && item === highlightedItem;
+
+            return (
+              <label
+                key={item}
+                style={{
+                  flex: '1 1 45%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  backgroundColor: isChecked
+                    ? '#e1f5fe'
+                    : isHighlight
+                    ? '#fff8e1'  // light yellow background for highlight
+                    : '#fff',
+                  border: isHighlight ? '2px solid #fbc02d' : '1px solid #ddd',
+                  borderRadius: '12px',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  fontWeight: isHighlight ? '600' : 'normal',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  transition: 'all 0.2s ease-in-out',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => toggleItem(category, item)}
                   style={{
-                    flex: '1 1 45%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    backgroundColor: isChecked ? '#e1f5fe' : '#fff',
-                    border: '1px solid #ddd',
-                    borderRadius: '12px',
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-                    transition: 'all 0.2s ease-in-out',
+                    marginRight: '10px',
+                    transform: 'scale(1.3)',
                   }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleItem(category, item)}
-                    style={{
-                      marginRight: '10px',
-                      transform: 'scale(1.3)',
-                    }}
-                  />
-                  {item}
-                </label>
-              );
-            })}
-          </div>
+                />
+                {item}
+              </label>
+            );
+          })}
         </div>
-      );
-    });
-  };
+      </div>
+    );
+  });
+};
 
   return (
     <div style={{
@@ -223,10 +252,10 @@ function SelectItemsPage() {
         </div>
       ) : (
         <>
-          {/* Search & Filter */}
+          {/* Sticky Search & Filter */}
           <div style={{
             position: 'sticky',
-            top: 50,
+            top: 80,
             backgroundColor: '#fff',
             zIndex: 1000,
             padding: '12px 0',
@@ -235,7 +264,7 @@ function SelectItemsPage() {
           }}>
             <input
               type="text"
-              placeholder="Search item or category..."
+              placeholder="Search or add custom item..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -276,42 +305,28 @@ function SelectItemsPage() {
                 </button>
               ))}
             </div>
+
+            {!hasMatchingItem() && searchTerm.trim() !== '' && (
+              <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                <button
+                  onClick={addCustomItem}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#2b79b5',
+                    color: '#fff',
+                    borderRadius: '20px',
+                    border: 'none',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Add "{searchTerm}" as custom item
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Custom Item Input */}
-          <div style={{ marginBottom: '16px' }}>
-            <input
-              type="text"
-              value={customItem}
-              onChange={(e) => setCustomItem(e.target.value)}
-              placeholder="Add custom item..."
-              style={{
-                padding: '12px 14px',
-                width: '100%',
-                marginBottom: '8px',
-                borderRadius: '10px',
-                border: '1px solid #ccc',
-                fontSize: '16px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-              }}
-            />
-            <button
-              onClick={addCustomItem}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#2b79b5',
-                color: '#fff',
-                borderRadius: '20px',
-                border: 'none',
-                fontSize: '14px',
-                cursor: 'pointer',
-              }}
-            >
-              Add Custom Item
-            </button>
-          </div>
-
-          {/* Render Items */}
+          {/* Render Filtered Items */}
           <div>
             {filter === 'all' && (
               <>

@@ -209,16 +209,28 @@ function AdminPanel() {
                       <div className="items-section">
                         <h4 className="section-title">Selected Items</h4>
                         <div className="items-grid">
-                          {Object.entries(items).map(([cat, list]) =>
-                            Array.isArray(list) && list.length > 0 && (
-                              <div key={cat} className="category-group">
-                                <h5 className="category-title">{cat.charAt(0).toUpperCase() + cat.slice(1)}</h5>
-                                <ul className="item-list">
-                                  {list.map((item, i) => <li key={i}>{item}</li>)}
-                                </ul>
-                              </div>
-                            )
-                          )}
+                          {[
+  'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
+  'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
+  'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
+  'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
+  'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams',
+  'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
+  'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
+  'crabItems', 'nonVegBiryanis', 'customItems'
+].map(cat => {
+  const list = items[cat];
+  if (!Array.isArray(list) || list.length === 0) return null;
+  return (
+    <div key={cat} className="category-group">
+      <h5 className="category-title">{cat.charAt(0).toUpperCase() + cat.slice(1)}</h5>
+      <ul className="item-list">
+        {list.map((item, i) => <li key={i}>{item}</li>)}
+      </ul>
+    </div>
+  );
+})}
+
                         </div>
                       </div>
 
