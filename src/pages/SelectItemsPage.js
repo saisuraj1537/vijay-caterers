@@ -23,7 +23,7 @@ function SelectItemsPage() {
   // ✅ Define custom display order of categories
   const customCategoryOrder = [
     'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
-    'kurmaCurries', 'specialGreavyCurries', 'specialRiceItems', 'vegDumBiryanis',
+    'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
     'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
     'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
     'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams',

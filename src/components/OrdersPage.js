@@ -17,6 +17,12 @@ function OrdersPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // New state variables for current and last month dates
+  const [currentMonthStartDate, setCurrentMonthStartDate] = useState('');
+  const [currentMonthEndDate, setCurrentMonthEndDate] = useState('');
+  const [lastMonthStartDate, setLastMonthStartDate] = useState('');
+  const [lastMonthEndDate, setLastMonthEndDate] = useState('');
+
   useEffect(() => {
     const bookingsRef = ref(database, 'finalBookings');
     onValue(bookingsRef, (snapshot) => {
@@ -45,6 +51,23 @@ function OrdersPage() {
       setAllBookings(bookingsList);
     });
   }, []);
+
+  // Effect to calculate current and last month dates on component mount
+  useEffect(() => {
+    const today = new Date();
+
+    // Calculate current month
+    const firstDayCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDayCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    setCurrentMonthStartDate(firstDayCurrentMonth.toLocaleDateString('en-CA'));
+    setCurrentMonthEndDate(lastDayCurrentMonth.toLocaleDateString('en-CA'));
+
+    // Calculate last month
+    const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastDayLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+    setLastMonthStartDate(firstDayLastMonth.toLocaleDateString('en-CA'));
+    setLastMonthEndDate(lastDayLastMonth.toLocaleDateString('en-CA'));
+  }, []); // Run only once on mount
 
   useEffect(() => {
     if (selectedDate) {
@@ -223,24 +246,24 @@ function OrdersPage() {
     html2pdf().from(content).save(filename);
   };
 
-  const handleDownloadDateRange = () => {
-    if (!startDate || !endDate) {
-      alert('Please select both a start and an end date for the download.');
+  const handleDownloadDateRange = (start, end, rangeName = 'Selected Range') => {
+    if (!start || !end) {
+      alert(`Please select both a start and an end date for the ${rangeName} download.`);
       return;
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const startDateObj = new Date(start);
+    const endDateObj = new Date(end);
     // Adjust end date to include the whole day
-    end.setHours(23, 59, 59, 999);
+    endDateObj.setHours(23, 59, 59, 999);
 
     const filteredBookings = allBookings.filter(booking => {
       const bookingDate = new Date(booking.date);
-      return bookingDate >= start && bookingDate <= end;
+      return bookingDate >= startDateObj && bookingDate <= endDateObj;
     });
 
     if (filteredBookings.length === 0) {
-      alert('No bookings found in the selected date range.');
+      alert(`No bookings found in the ${rangeName} date range.`);
       return;
     }
 
@@ -278,7 +301,7 @@ function OrdersPage() {
     });
 
     const csvContent = csvRows.join('\n');
-    const filename = `VijayCaterers_BookingDetails_${startDate}_to_${endDate}.csv`;
+    const filename = `VijayCaterers_BookingDetails_${rangeName.replace(/\s/g, '_')}_${start}_to_${end}.csv`;
 
     // Create a Blob and download the file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -296,9 +319,17 @@ function OrdersPage() {
       // Fallback for older browsers
       window.open('data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent));
     }
-    alert(`Bookings from ${startDate} to ${endDate} downloaded successfully as CSV!`);
+    alert(`Bookings for ${rangeName} downloaded successfully as CSV!`);
   };
 
+  // New handlers for current and last month
+  const handleDownloadCurrentMonth = () => {
+    handleDownloadDateRange(currentMonthStartDate, currentMonthEndDate, 'Current_Month');
+  };
+
+  const handleDownloadLastMonth = () => {
+    handleDownloadDateRange(lastMonthStartDate, lastMonthEndDate, 'Last_Month');
+  };
 
   const renderBookingCard = (booking, index) => {
     const isCompleted = !!completedBookingsMap[booking.key];
@@ -405,7 +436,8 @@ function OrdersPage() {
       </div>
 
       <div className="date-range-selector">
-        <h3>Download Bookings by Date Range (CSV)</h3>
+        <h3>Download Bookings as CSV</h3>
+        {/* Date Range Selector */}
         <div className="date-inputs">
           <label htmlFor="startDate">Start Date:</label>
           <input
@@ -423,8 +455,18 @@ function OrdersPage() {
             onChange={(e) => setEndDate(e.target.value)}
             className="date-input-field"
           />
-          <button onClick={handleDownloadDateRange} className="download-range-btn">
-            ⬇️ Download CSV
+          <button onClick={() => handleDownloadDateRange(startDate, endDate, 'Custom_Range')} className="download-range-btn">
+            ⬇️ Download Custom Range CSV
+          </button>
+        </div>
+
+        {/* New buttons for Current and Last Month */}
+        <div className="quick-download-buttons">
+          <button onClick={handleDownloadCurrentMonth} className="download-range-btn">
+            ⬇️ Download Current Month CSV
+          </button>
+          <button onClick={handleDownloadLastMonth} className="download-range-btn">
+            ⬇️ Download Last Month CSV
           </button>
         </div>
       </div>
@@ -616,13 +658,19 @@ function OrdersPage() {
           font-weight: 600;
         }
 
-        .date-inputs {
+        .date-inputs, .quick-download-buttons {
           display: flex;
           justify-content: center;
           align-items: center;
           gap: 1.5rem;
           flex-wrap: wrap;
+          margin-bottom: 1rem; /* Space between custom range and quick buttons */
         }
+        
+        .quick-download-buttons {
+            margin-top: 1.5rem;
+        }
+
 
         .date-inputs label {
           font-weight: 600;
@@ -937,7 +985,7 @@ function OrdersPage() {
           .bookings-title {
             font-size: 1.5rem;
           }
-          .date-inputs {
+          .date-inputs, .quick-download-buttons {
             flex-direction: column;
             gap: 1rem;
           }

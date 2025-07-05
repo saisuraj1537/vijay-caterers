@@ -44,7 +44,22 @@ function AppContent() {
         onToggle={() => setExpanded(!expanded)}
       >
         <Container>
-          <Navbar.Brand as={Link} to="/">🍽️ Catering Booking</Navbar.Brand>
+          <Navbar.Brand as={Link} to="/" className="d-flex align-items-center" style={{
+    fontFamily: "'Times New Roman', Times, serif",
+    fontWeight: "bold",
+    letterSpacing: "1px"
+  }}>
+          
+  <img
+    src="https://res.cloudinary.com/dnllne8qr/image/upload/v1735446856/WhatsApp_Image_2024-12-27_at_8.13.22_PM-removebg_m3863q.png"
+    alt="Logo"
+    height="40"
+    className="me-2"
+    style={{ objectFit: 'contain' }}
+  />
+  Vijay Caterers
+</Navbar.Brand>
+
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">

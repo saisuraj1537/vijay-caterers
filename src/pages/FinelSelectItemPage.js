@@ -22,13 +22,13 @@ function FinalSelectItemsPage() {
 
   // 🔤 Custom order
   const customCategoryOrder = [
-    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
-    'kurmaCurries', 'specialGreavyCurries', 'specialRiceItems', 'vegDumBiryanis',
+    'sweets', 'juices', 'vegSnaks', 'hots', 'rotis',
+    'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
     'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
-    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
+    'avakayalu', 'powders', 'curds', 'papads','salads', 'chatItems', 'chineseList',
     'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams',
-    'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
-    'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
+    'chickenSnacks', 'prawnsSnacks', 'eggSnacks', 'seaFoods',
+    'muttonCurries', 'eggItems', 'prawnItems', 'chickenCurries',
     'crabItems', 'nonVegBiryanis'
   ];
 
@@ -227,7 +227,7 @@ function FinalSelectItemsPage() {
           {/* Search & Filter */}
           <div style={{
             position: 'sticky',
-            top: 50,
+            top: 80,
             backgroundColor: '#fff',
             zIndex: 1000,
             padding: '12px 0',
