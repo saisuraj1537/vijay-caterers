@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getDatabase, ref, onValue, remove } from 'firebase/database';
+import { getDatabase, ref, onValue, remove,set } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import emailjs from 'emailjs-com';
 
@@ -61,12 +61,41 @@ function AdminPanel() {
   };
 
   const handleDelete = (userMobile, customerKey) => {
-    const confirmed = window.confirm('Are you sure you want to delete this booking?');
-    if (confirmed) {
-      remove(ref(getDatabase(), `finalBookings/${userMobile}/${customerKey}`));
-      alert('🗑️ Booking deleted.');
+  const confirmed = window.confirm('Are you sure you want to delete this booking?');
+  if (!confirmed) return;
+
+  const db = getDatabase();
+  const bookingRef = ref(db, `finalBookings/${userMobile}/${customerKey}`);
+
+  onValue(bookingRef, (snap) => {
+    const bookingData = snap.val();
+    if (bookingData) {
+      const deleteRef = ref(db, `deleteBooking/${userMobile}/${customerKey}`);
+      // Write to deleteBooking
+      set(deleteRef, bookingData)
+        .then(() => {
+          // Remove from finalBookings
+          remove(bookingRef)
+            .then(() => {
+              alert('🗑️ Booking moved to deleted bookings.');
+            })
+            .catch((err) => {
+              console.error('Error removing booking:', err);
+              alert('❌ Failed to remove booking.');
+            });
+        })
+        .catch((err) => {
+          console.error('Error logging deletion:', err);
+          alert('❌ Failed to log deleted booking.');
+        });
+    } else {
+      alert('❌ Booking not found.');
     }
-  };
+  }, {
+    onlyOnce: true
+  });
+};
+
 
   const handleEdit = booking => {
     navigate('/final-select-items', {

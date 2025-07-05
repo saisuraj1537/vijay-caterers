@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import { ref, onValue, set,runTransaction } from 'firebase/database';
+import { ref, onValue, set, runTransaction } from 'firebase/database';
 import { database } from '../firebase';
 import emailjs from 'emailjs-com';
 import html2pdf from 'html2pdf.js';
@@ -13,6 +13,9 @@ function OrdersPage() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [completedBookingsMap, setCompletedBookingsMap] = useState({});
+
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
     const bookingsRef = ref(database, 'finalBookings');
@@ -26,13 +29,13 @@ function OrdersPage() {
           Object.entries(userBookings).forEach(([key, value]) => {
             if (value.details?.eventDate) {
               const eventDate = value.details.eventDate;
-              dates.push(eventDate);
               bookingsList.push({
                 ...value.details,
                 date: eventDate,
-                key,
-                selectedItems: value.items || {},
+                key, // Firebase key for the booking
+                selectedItems: value.items || {}, // Keep for other features if needed
               });
+              dates.push(eventDate); // Only push date if eventDate exists
             }
           });
         });
@@ -56,14 +59,12 @@ function OrdersPage() {
   const tileClassName = ({ date, view }) => {
     if (view === 'month') {
       const dateStr = date.toLocaleDateString('en-CA'); // returns 'YYYY-MM-DD'
-
       return eventDates.includes(dateStr) ? 'highlight' : null;
     }
   };
 
   const handleDateClick = (date) => {
     const dateStr = date.toLocaleDateString('en-CA'); // returns 'YYYY-MM-DD'
-
     setSelectedDate(dateStr);
     const filtered = allBookings.filter((booking) => booking.date === dateStr);
     setSelectedDateBookings(filtered);
@@ -95,179 +96,208 @@ function OrdersPage() {
       });
   };
 
-//   const markAsCompleted = (booking) => {
-//     const path = `completedOrders/${booking.date}/${booking.key}`;
-//     const bookingData = {
-//       ...booking,
-//       selectedItems: booking.selectedItems || {},
-//     };
-//     set(ref(database, path), bookingData)
-//       .then(() => alert('Marked as completed and moved to completed orders.'))
-//       .catch((err) => alert('Failed to update Firebase: ' + err));
-//   };
-const markAsCompleted = (booking) => {
-  if (completedBookingsMap[booking.key]) {
-    // alert('This booking is already marked as completed.');
-    return;
-  }
+  const markAsCompleted = (booking) => {
+    if (completedBookingsMap[booking.key]) {
+      return;
+    }
 
-  const completedPath = `completedOrders/${booking.date}/${booking.key}`;
-  const statsPath = `stats/servedCount`;
+    const completedPath = `completedOrders/${booking.date}/${booking.key}`;
+    const statsPath = `stats/servedCount`;
 
-  const bookingData = {
-    ...booking,
-    selectedItems: booking.selectedItems || {},
+    const bookingData = {
+      ...booking,
+      selectedItems: booking.selectedItems || {},
+    };
+
+    set(ref(database, completedPath), bookingData)
+      .then(() => {
+        return runTransaction(ref(database, statsPath), (currentValue) => {
+          return (currentValue || 0) + 1;
+        });
+      })
+      .then(() => {
+        // No alert needed here
+      })
+      .catch((err) => {
+        alert('Failed to complete operation: ' + err.message);
+      });
   };
 
-  set(ref(database, completedPath), bookingData)
-    .then(() => {
-      return runTransaction(ref(database, statsPath), (currentValue) => {
-        return (currentValue || 0) + 1;
-      });
-    })
-    .then(() => {
-    //   alert('Marked as completed and servedCount updated.');
-    })
-    .catch((err) => {
-      alert('Failed to complete operation: ' + err.message);
-    });
-};
+  const generatePdf = (booking) => {
+    const filename = `Order_${booking.name.replace(/\s/g, '_')}_${booking.date}.pdf`;
 
+    const categoryOrder = [
+      "sweets", "juices", "veg snacks", "hots", "rotis", "kurma curries", "special greavy curryis",
+      "special rice items", "veg dum biryani", "dal items", "veg fry items", "liquid items",
+      "roti chutneys", "avakayalu", "powders", "curds", "papads", "chat items", "chinese",
+      "italian snacks", "south indian tiffin items", "fruits", "ice creams", "chicken snacks",
+      "prawn snacks", "egg snacks", "sea food", "mutton curries", "egg", "prawns",
+      "chicken curries", "crabs", "non veg biryanis"
+    ];
 
-const generatePdf = (booking) => {
-  const filename = `Order_${booking.name.replace(/\s/g, '_')}_${booking.date}.pdf`;
+    const selectedItems = booking.selectedItems || {};
 
-  // Your desired custom category order
-  const categoryOrder = [
-    "sweets",
-    "juices",
-    "veg snacks",
-    "hots",
-    "rotis",
-    "kurma curries",
-    "special greavy curryis",
-    "special rice items",
-    "veg dum biryani",
-    "dal items",
-    "veg fry items",
-    "liquid items",
-    "roti chutneys",
-    "avakayalu",
-    "powders",
-    "curds",
-    "papads",
-    "chat items",
-    "chinese",
-    "italian snacks",
-    "south indian tiffin items",
-    "fruits",
-    "ice creams",
-    "chicken snacks",
-    "prawn snacks",
-    "egg snacks",
-    "sea food",
-    "mutton curries",
-    "egg",
-    "prawns",
-    "chicken curries",
-    "crabs",
-    "non veg biryanis"
-  ];
+    const normalizedSelectedItems = Object.entries(selectedItems).reduce((acc, [key, val]) => {
+      acc[key.toLowerCase()] = val;
+      return acc;
+    }, {});
 
-  const selectedItems = booking.selectedItems || {};
+    const itemsHtml = categoryOrder
+      .filter((category) => normalizedSelectedItems[category])
+      .map((category) => {
+        const items = normalizedSelectedItems[category];
+        const itemsArray = Array.isArray(items)
+          ? items
+          : typeof items === 'object'
+            ? Object.keys(items).filter((item) => items[item])
+            : [];
 
-  // Normalize keys to lowercase to match categoryOrder
-  const normalizedSelectedItems = Object.entries(selectedItems).reduce((acc, [key, val]) => {
-    acc[key.toLowerCase()] = val;
-    return acc;
-  }, {});
+        if (itemsArray.length === 0) return '';
 
-  const itemsHtml = categoryOrder
-    .filter((category) => normalizedSelectedItems[category])
-    .map((category) => {
-      const items = normalizedSelectedItems[category];
-      const itemsArray = Array.isArray(items)
-        ? items
-        : typeof items === 'object'
-          ? Object.keys(items).filter((item) => items[item])
-          : [];
+        const formattedItems = itemsArray
+          .map(
+            (item) =>
+              `<li style="margin: 4px 0;">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
+          )
+          .join('');
 
-      if (itemsArray.length === 0) return '';
+        const formattedCategory = category.replace(/\b\w/g, c => c.toUpperCase());
 
-      const formattedItems = itemsArray
-        .map(
-          (item) =>
-            `<li style="margin: 4px 0;">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
-        )
-        .join('');
+        return `
+          <div style="margin-bottom: 15px; page-break-inside: avoid;">
+            <h4 style="color: #8B4513; margin: 8px 0; font-size: 15px;">${formattedCategory}</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #555; page-break-inside: avoid;">
+              ${formattedItems}
+            </ul>
+          </div>
+        `;
+      })
+      .join('');
 
-      // Capitalize first letter of each word in category
-      const formattedCategory = category.replace(/\b\w/g, c => c.toUpperCase());
-
-      return `
-  <div style="margin-bottom: 15px; page-break-inside: avoid;">
-    <h4 style="color: #8B4513; margin: 8px 0; font-size: 15px;">${formattedCategory}</h4>
-    <ul style="margin: 0; padding-left: 20px; color: #555; page-break-inside: avoid;">
-      ${formattedItems}
-    </ul>
-  </div>
-`;
-
-    })
-    .join('');
-
-  // HTML structure of the PDF
-  const content = `
-  <div style="font-family: 'Georgia', serif; padding: 30px; color: #3c3c3c; background-color: #fffbe6; border: 10px solid #f5e1a4;">
-    <div style="text-align: center; margin-bottom: 25px;">
-      <img src="https://res.cloudinary.com/dnllne8qr/image/upload/v1735446856/WhatsApp_Image_2024-12-27_at_8.13.22_PM-removebg_m3863q.png" alt="Vijay Caterers" style="width: 150px; margin-bottom: 10px;" />
-      <h1 style="font-size: 24px; color: #b8860b;">Vijay Caterers</h1>
-      <p style="font-style: italic; color: #555;">"Elevate your event with our exceptional catering services"</p>
-    </div>
-
-    <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
-
-    <div style="margin-bottom: 25px;">
-      <h2 style="color: #8B4513; font-size: 18px; margin-bottom: 12px;">Order Details</h2>
-      <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-        <div style="flex: 1 1 45%;">
-          <p><strong>Name:</strong> ${booking.name}</p>
-          <p><strong>Mobile:</strong> ${booking.mobile}</p>
-          <p><strong>Email:</strong> ${booking.email}</p>
+    const content = `
+      <div style="font-family: 'Georgia', serif; padding: 30px; color: #3c3c3c; background-color: #fffbe6; border: 10px solid #f5e1a4;">
+        <div style="text-align: center; margin-bottom: 25px;">
+          <img src="https://res.cloudinary.com/dnllne8qr/image/upload/v1735446856/WhatsApp_Image_2024-12-27_at_8.13.22_PM-removebg_m3863q.png" alt="Vijay Caterers" style="width: 150px; margin-bottom: 10px;" />
+          <h1 style="font-size: 24px; color: #b8860b;">Vijay Caterers</h1>
+          <p style="font-style: italic; color: #555;">"Elevate your event with our exceptional catering services"</p>
         </div>
-        <div style="flex: 1 1 45%;">
-          <p><strong>Event Date:</strong> ${booking.date}</p>
-          <p><strong>Event Time:</strong> ${booking.eventTime}</p>
-          <p><strong>Event Place:</strong> ${booking.eventPlace}</p>
-          <p><strong>No. of Plates:</strong> ${booking.plates}</p>
+
+        <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+
+        <div style="margin-bottom: 25px;">
+          <h2 style="color: #8B4513; font-size: 18px; margin-bottom: 12px;">Order Details</h2>
+          <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+            <div style="flex: 1 1 45%;">
+              <p><strong>Name:</strong> ${booking.name}</p>
+              <p><strong>Mobile:</strong> ${booking.mobile}</p>
+              <p><strong>Email:</strong> ${booking.email}</p>
+            </div>
+            <div style="flex: 1 1 45%;">
+              <p><strong>Event Date:</strong> ${booking.date}</p>
+              <p><strong>Event Time:</strong> ${booking.eventTime}</p>
+              <p><strong>Event Place:</strong> ${booking.eventPlace}</p>
+              <p><strong>No. of Plates:</strong> ${booking.plates}</p>
+            </div>
+          </div>
+        </div>
+
+        <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+
+        <div style="margin-bottom: 30px;">
+          <h2 style="color: #8B4513; font-size: 18px;">Selected Items</h2>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+            ${itemsHtml}
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777;">
+          <p>📍 Hyderabad, Telangana</p>
+          <p>📞 9866973747 / 9959500833</p>
+          <p>📧 <a href="mailto:darwaen1211@gmail.com" style="color: #b8860b;">darwaen1211@gmail.com</a></p>
+          <p>📸 Instagram: <a href="https://instagram.com/vijaycaterers_" style="color: #b8860b;">@vijaycaterers_</a></p>
+          <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
         </div>
       </div>
-    </div>
+    `;
 
-    <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+    html2pdf().from(content).save(filename);
+  };
 
-    <div style="margin-bottom: 30px;">
-  <h2 style="color: #8B4513; font-size: 18px;">Selected Items</h2>
-  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-    ${itemsHtml}
-  </div>
-</div>
+  const handleDownloadDateRange = () => {
+    if (!startDate || !endDate) {
+      alert('Please select both a start and an end date for the download.');
+      return;
+    }
 
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    // Adjust end date to include the whole day
+    end.setHours(23, 59, 59, 999);
 
-    <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777;">
-      <p>📍 Hyderabad, Telangana</p>
-      <p>📞 9866973747 / 9959500833</p>
-      <p>📧 <a href="mailto:darwaen1211@gmail.com" style="color: #b8860b;">darwaen1211@gmail.com</a></p>
-      <p>📸 Instagram: <a href="https://instagram.com/vijaycaterers_" style="color: #b8860b;">@vijaycaterers_</a></p>
-      <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
-    </div>
-  </div>
-`;
+    const filteredBookings = allBookings.filter(booking => {
+      const bookingDate = new Date(booking.date);
+      return bookingDate >= start && bookingDate <= end;
+    });
 
+    if (filteredBookings.length === 0) {
+      alert('No bookings found in the selected date range.');
+      return;
+    }
 
-  html2pdf().from(content).save(filename);
-};
+    // Sort bookings by date for better organization
+    filteredBookings.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    // Define CSV headers (the order you want them in Excel)
+    const headers = [
+      "Booking ID",
+      "Customer Name",
+      "Mobile",
+      "Email",
+      "Event Date",
+      "Event Time",
+      "Event Place",
+      "Number of Plates"
+    ];
+
+    // Create CSV rows
+    const csvRows = [];
+    csvRows.push(headers.join(',')); // Add headers as the first row
+
+    filteredBookings.forEach(booking => {
+      const row = [
+        `"${booking.key}"`, // Enclose ID in quotes to ensure it's treated as text
+        `"${booking.name.replace(/"/g, '""')}"`, // Handle commas/quotes in names
+        `"${booking.mobile}"`,
+        `"${booking.email}"`,
+        `"${booking.date}"`,
+        `"${booking.eventTime}"`,
+        `"${booking.eventPlace.replace(/"/g, '""')}"`, // Handle commas/quotes in places
+        booking.plates
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    const csvContent = csvRows.join('\n');
+    const filename = `VijayCaterers_BookingDetails_${startDate}_to_${endDate}.csv`;
+
+    // Create a Blob and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) { // Feature detection
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url); // Clean up
+    } else {
+      // Fallback for older browsers
+      window.open('data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent));
+    }
+    alert(`Bookings from ${startDate} to ${endDate} downloaded successfully as CSV!`);
+  };
 
 
   const renderBookingCard = (booking, index) => {
@@ -300,9 +330,9 @@ const generatePdf = (booking) => {
               <h4 className="section-title">Selected Items</h4>
               <div className="items-grid">
                 {Object.entries(booking.selectedItems || {}).map(([category, items]) => {
-                  const itemsArray = Array.isArray(items) ? items : 
+                  const itemsArray = Array.isArray(items) ? items :
                     (typeof items === 'object' ? Object.keys(items).filter(item => items[item]) : []);
-                  
+
                   if (itemsArray.length > 0) {
                     return (
                       <div key={category} className="category-group">
@@ -372,6 +402,31 @@ const generatePdf = (booking) => {
           tileClassName={tileClassName}
           className="custom-calendar"
         />
+      </div>
+
+      <div className="date-range-selector">
+        <h3>Download Bookings by Date Range (CSV)</h3>
+        <div className="date-inputs">
+          <label htmlFor="startDate">Start Date:</label>
+          <input
+            type="date"
+            id="startDate"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="date-input-field"
+          />
+          <label htmlFor="endDate">End Date:</label>
+          <input
+            type="date"
+            id="endDate"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="date-input-field"
+          />
+          <button onClick={handleDownloadDateRange} className="download-range-btn">
+            ⬇️ Download CSV
+          </button>
+        </div>
       </div>
 
       <div className="bookings-container">
@@ -543,6 +598,76 @@ const generatePdf = (booking) => {
         }
 
         /* --- End Calendar Styling --- */
+
+        /* --- Date Range Selector Styling --- */
+        .date-range-selector {
+          background: #ffffff;
+          border-radius: 16px;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+          padding: 2rem;
+          margin-bottom: 3rem;
+          text-align: center;
+        }
+
+        .date-range-selector h3 {
+          font-size: 1.6rem;
+          color: #2c3e50;
+          margin-bottom: 1.5rem;
+          font-weight: 600;
+        }
+
+        .date-inputs {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 1.5rem;
+          flex-wrap: wrap;
+        }
+
+        .date-inputs label {
+          font-weight: 600;
+          color: #555;
+          font-size: 1.1em;
+        }
+
+        .date-input-field {
+          padding: 0.8rem 1rem;
+          border: 1px solid #ccd6e0;
+          border-radius: 8px;
+          font-size: 1rem;
+          color: #34495e;
+          outline: none;
+          transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .date-input-field:focus {
+          border-color: #4a90e2;
+          box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+        }
+
+        .download-range-btn {
+          background: #27ae60;
+          color: white;
+          padding: 0.8rem 1.5rem;
+          border: none;
+          border-radius: 8px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          font-size: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);
+        }
+
+        .download-range-btn:hover {
+          background: #229954;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 15px rgba(39, 174, 96, 0.4);
+        }
+        /* --- End Date Range Selector Styling --- */
+
 
         .bookings-container {
           background: #ffffff;
@@ -811,6 +936,10 @@ const generatePdf = (booking) => {
           }
           .bookings-title {
             font-size: 1.5rem;
+          }
+          .date-inputs {
+            flex-direction: column;
+            gap: 1rem;
           }
         }
       `}</style>
