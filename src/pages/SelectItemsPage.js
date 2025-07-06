@@ -20,7 +20,7 @@ function SelectItemsPage() {
   const customerName = booking?.customerName;
 
   const customCategoryOrder = [
-    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
+    'sweets', 'juices', 'vegsnaks', 'hots', 'rotis',
     'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
     'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
     'avakayalu', 'powders', 'curds', 'papads', 'salads', 'chatItems', 'chineseList',
@@ -130,7 +130,10 @@ function SelectItemsPage() {
     }, { onlyOnce: true });
   };
 
-  const renderGroupedItems = (groupedItems) => {
+  // 🔶 Define all sweets to highlight
+const highlightedSweets = ["Annamya Laddu – అన్నమ్య లడ్డు","Poornam – పూర్ణం","Chakkera Pongali – చక్కెర పంగళి","Apricot Pudding – ఆప్రికాట్ పుడ్డింగ్","Carrot Halwa – గాజరుల హల్వా","Bobbattlu – బొబ్బట్లు","Jilebi – జిలేబీ","Double Ka Meetha – డబుల్ కా మీథా","Gulab Jamun – గులాబ్ జామున్"];
+
+const renderGroupedItems = (groupedItems) => {
   const lowerSearch = searchTerm.toLowerCase();
 
   const sortedEntries = Object.entries(groupedItems).sort((a, b) => {
@@ -145,23 +148,33 @@ function SelectItemsPage() {
 
   return sortedEntries.map(([category, itemsObj]) => {
     const categoryMatch = category.toLowerCase().includes(lowerSearch);
-    let items = Object.values(itemsObj).filter((item) =>
-      item.toLowerCase().includes(lowerSearch)
-    );
+    let items;
+if (categoryMatch) {
+  items = Object.values(itemsObj); // Show all items in this category if heading matches
+} else {
+  items = Object.values(itemsObj).filter((item) =>
+    item.toLowerCase().includes(lowerSearch)
+  );
+}
+
 
     if (!categoryMatch && items.length === 0) return null;
 
     const selectedCount = selectedItems[category]?.length || 0;
 
     // 🟡 SPECIAL LOGIC FOR SWEETS CATEGORY
-    const highlightedItem = "Angoor Jamun – అంగూర్ జామున్";
     if (category === 'sweets') {
-      const index = items.indexOf(highlightedItem);
-      if (index !== -1) {
-        items.splice(index, 1); // remove it from its position
-        items.unshift(highlightedItem); // add to the top
-      }
-    }
+  const highlightedSet = new Set(highlightedSweets);
+  
+  // Preserve the specific order of highlightedSweets
+  const highlighted = highlightedSweets.filter(item => items.includes(item));
+  
+  // Put the remaining non-highlighted items after
+  const nonHighlighted = items.filter(item => !highlightedSet.has(item));
+  
+  items = [...highlighted, ...nonHighlighted];
+}
+
 
     return (
       <div key={category} style={{ marginBottom: '24px' }}>
@@ -183,9 +196,7 @@ function SelectItemsPage() {
         }}>
           {items.map((item) => {
             const isChecked = selectedItems[category]?.includes(item) || false;
-
-            // 🔵 Apply special highlight for "Angoor Jamun – అంగూర్ జామున్"
-            const isHighlight = category === 'sweets' && item === highlightedItem;
+            const isHighlight = category === 'sweets' && highlightedSweets.includes(item);
 
             return (
               <label
@@ -197,7 +208,7 @@ function SelectItemsPage() {
                   backgroundColor: isChecked
                     ? '#e1f5fe'
                     : isHighlight
-                    ? '#fff8e1'  // light yellow background for highlight
+                    ? '#fff8e1'
                     : '#fff',
                   border: isHighlight ? '2px solid #fbc02d' : '1px solid #ddd',
                   borderRadius: '12px',
@@ -227,6 +238,7 @@ function SelectItemsPage() {
     );
   });
 };
+
 
   return (
     <div style={{

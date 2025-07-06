@@ -12,6 +12,9 @@ function BookingsPage() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [priceInputs, setPriceInputs] = useState({});
+
+  
 
   const userPhone = localStorage.getItem("loggedInMobile");
 
@@ -25,6 +28,15 @@ function BookingsPage() {
     'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
     'crabItems', 'nonVegBiryanis', 'customItems'
   ];
+
+  const NON_VEG_SNACKS = ['chickenSnacks', 'prawnsSnacks', 'eggSnacks', 'muttonSnacks'];
+
+  const formatDate = (dateStr) => {
+  if (!dateStr) return '-';
+  const [year, month, day] = dateStr.split('-'); // assumes date is in YYYY-MM-DD
+  return `${day}/${month}/${year}`;
+};
+
 
   useEffect(() => {
     const db = getDatabase();
@@ -65,11 +77,33 @@ function BookingsPage() {
   }, [userPhone]);
 
   const handleCardClick = (customerName) => {
-    setSelectedCustomer(prev => (prev === customerName ? null : customerName));
-  };
+  setSelectedCustomer(prev => (prev === customerName ? null : customerName));
+  const selectedBooking = bookings.find(b => b.customerName === customerName);
+  setPriceInputs(prev => ({
+    ...prev,
+    [customerName]: selectedBooking?.details?.pricePerPlate || ''
+  }));
+};
+
+const handlePriceChange = (customerName, value) => {
+  setPriceInputs(prev => ({ ...prev, [customerName]: value }));
+};
+
+const savePricePerPlate = (booking) => {
+  const db = getDatabase();
+  const bookingRef = ref(db, `bookings/${userPhone}/${booking.customerName}/details`);
+
+  set(bookingRef, {
+    ...booking.details,
+    pricePerPlate: priceInputs[booking.customerName],
+  });
+};
+
+
 
   const generatePdf = (booking) => {
-  const filename = `Order_${booking.details.name.replace(/\s/g, '_')}_${booking.details.eventDate}.pdf`;
+  const filename = `Order_${booking.details.name.replace(/\s/g, '_')}_${formatDate(booking.details.eventDate)}.pdf`;
+
 
   const categoryOrder = CATEGORY_ORDER;
 
@@ -136,12 +170,15 @@ function BookingsPage() {
           <p><strong>Name:</strong> ${booking.details.name}</p>
           <p><strong>Mobile:</strong> ${booking.details.mobile}</p>
           <p><strong>Email:</strong> ${booking.details.email || '-'}</p>
+          <p><strong>Event Date:</strong> ${formatDate(booking.details.eventDate)}</p>
+
         </div>
         <div style="flex: 1 1 45%;">
-          <p><strong>Event Date:</strong> ${booking.details.eventDate}</p>
+          
           <p><strong>Event Time:</strong> ${booking.details.eventTime}</p>
           <p><strong>Event Place:</strong> ${booking.details.eventPlace}</p>
           <p><strong>No. of Plates:</strong> ${booking.details.plates}</p>
+          <p><strong>Price Per Plate:</strong> ₹${booking.details.pricePerPlate || '-'}</p>
         </div>
       </div>
     </div>
@@ -156,8 +193,20 @@ function BookingsPage() {
       </div>
     </div>
 
+    <!-- Terms and Conditions Page -->
+  <div style="page-break-before: always; padding: 40px; font-family: 'Georgia', serif; background-color: #fffbe6; border: 10px solid #f5e1a4; box-sizing: border-box; margin-top : 40px;">
+    <h2 style="text-align: center; color: #8B4513;">Terms and Conditions</h2>
+    <ul style="margin-top: 25px; color: #444; font-size: 14px; line-height: 1.7;">
+      <li>Payment can be made by cash, UPI, bank transfer, or cheque (cheque clearance is mandatory before event).</li>
+      <li>20% advance on the day of booking, 70% before 1 week of the party, and remaining balance to be paid after the event.</li>
+      <li>Final menu must be confirmed at least 5 days in advance.</li>
+      <li>Extra plates will be charged separately.</li>
+    </ul>
+    <p style="margin-top: 30px; text-align: center; font-style: italic; color: #777;">Thank you for choosing Vijay Caterers!</p>
+  </div>
+
     <!-- Footer -->
-    <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777;">
+    <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777; margin-bottom:570px">
       <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 10px;">
         <span>📍 Kukatpally, Hyderabad, Telangana</span>
         <span>📞 9866937747 / 9959500833 / 9676967747</span>
@@ -170,18 +219,7 @@ function BookingsPage() {
     </div>
   </div>
 
-  <!-- Terms and Conditions Page -->
-  <div style="page-break-before: always; padding: 40px; font-family: 'Georgia', serif; background-color: #fffbe6; border: 10px solid #f5e1a4; box-sizing: border-box;">
-    <h2 style="text-align: center; color: #8B4513;">Terms and Conditions</h2>
-    <ul style="margin-top: 25px; color: #444; font-size: 14px; line-height: 1.7;">
-      <li>Payment can be made by cash, UPI, bank transfer, or cheque (cheque clearance is mandatory before event).</li>
-      <li>20% advance on the day of booking, 70% before 1 week of the party, and remaining balance to be paid after the event.</li>
-      <li>Final menu must be confirmed at least 5 days in advance.</li>
-      <li>Extra plates will be charged separately.</li>
-      <li>If the party postpones or cancels the event, 10% of the total amount will be charged.</li>
-    </ul>
-    <p style="margin-top: 30px; text-align: center; font-style: italic; color: #777;">Thank you for choosing Vijay Caterers!</p>
-  </div>
+  
 `;
 
   html2pdf().from(content).save(filename);
@@ -205,118 +243,226 @@ function BookingsPage() {
     });
   };
 
-  const renderBookingCard = (booking, isCompleted = false) => {
-    const itemCount = booking.items
-      ? Object.values(booking.items).reduce(
-          (total, categoryItems) => total + Object.keys(categoryItems).length,
-          0
-        )
-      : 0;
+const renderBookingCard = (booking, isCompleted = false) => {
+  const itemCount = booking.items
+    ? Object.values(booking.items).reduce(
+        (total, categoryItems) => total + Object.keys(categoryItems).length,
+        0
+      )
+    : 0;
 
-    return (
-      <div
-        key={booking.customerName}
-        className={`booking-card ${selectedCustomer === booking.customerName ? 'expanded' : ''}`}
-        onClick={() => handleCardClick(booking.customerName)}
-      >
-        <div className="booking-card-header">
-          <h3 className="customer-name">{booking.details.name}</h3>
-          <span className="item-count">{itemCount} items</span>
-        </div>
+  const allItems = booking.items || {};
 
-        <div className="booking-details">
-          <div className="detail-row">
-            <span className="detail-label">Mobile:</span>
-            <span className="detail-value">{booking.details.mobile}</span>
-          </div>
-          <div className="detail-row">
-            <span className="detail-label">Event:</span>
-            <span className="detail-value">
-              {booking.details.eventDate} at {booking.details.eventTime}, {booking.details.eventPlace}
-            </span>
-          </div>
-          <div className="detail-row">
-            <span className="detail-label">Plates:</span>
-            <span className="detail-value">{booking.details.plates}</span>
-          </div>
-        </div>
+  // Separate categories
+  const nonVegItems = NON_VEG_SNACKS.filter(cat => allItems[cat]);
+  const vegSnacksItems = allItems['vegSnacks'];
+  const otherCategories = Object.entries(allItems)
+    .filter(([key]) => key !== 'vegSnacks' && !NON_VEG_SNACKS.includes(key))
+    .sort(([a], [b]) => {
+      const indexA = CATEGORY_ORDER.indexOf(a);
+      const indexB = CATEGORY_ORDER.indexOf(b);
+      return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+    });
 
-        {selectedCustomer === booking.customerName && (
-          <div className="booking-expanded">
-            <div className="items-section">
-              <h4 className="section-title">🍽️ Selected Items</h4>
-              <div className="items-grid">
-                {booking.items &&
-                  Object.entries(booking.items)
-                    .sort(([a], [b]) => {
-                      const indexA = CATEGORY_ORDER.indexOf(a);
-                      const indexB = CATEGORY_ORDER.indexOf(b);
-                      return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
-                    })
-                    .map(([category, items]) => (
-                      <div key={category} className="category-group">
-                        <h5 className="category-title">{category}</h5>
-                        <ul className="item-list">
-                          {Object.values(items).map((item, idx) => (
-                            <li key={idx}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-              </div>
-            </div>
-
-            {!isCompleted && (
-              <div className="action-buttons">
-                <button
-                  className="btn btn-edit"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEditClick(booking);
-                  }}
-                >
-                  ✏️ Edit Items
-                </button>
-                <button
-                  className="btn btn-email"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSendToAdmin(booking);
-                  }}
-                >
-                  ✅ Send to Admin
-                </button>
-                <button
-  className="btn btn-pdf"
-  onClick={(e) => {
-    e.stopPropagation();
-    generatePdf(booking);
-  }}
->
-  📄 Download PDF
-</button>
-
-<button
-  className="btn btn-whatsapp"
-  onClick={(e) => {
-    e.stopPropagation();
-    const phone = booking.details.mobile.replace(/\D/g, ''); // Remove non-digits
-    const message = encodeURIComponent(
-      `Hi ${booking.details.name}, this is Vijay Caterers regarding your booking on ${booking.details.eventDate}.`
-    );
-    window.open(`https://wa.me/91${phone}?text=${message}`, '_blank');
-  }}
->
-  📱 WhatsApp
-</button>
-
-              </div>
-            )}
-          </div>
-        )}
+  return (
+    <div
+      key={booking.customerName}
+      className={`booking-card ${selectedCustomer === booking.customerName ? 'expanded' : ''}`}
+      onClick={() => handleCardClick(booking.customerName)}
+    >
+      <div className="booking-card-header">
+        <h3 className="customer-name">{booking.details.name}</h3>
+        <span className="item-count">{itemCount} items</span>
       </div>
-    );
-  };
+
+      <div className="booking-details">
+        <div className="detail-row">
+          <span className="detail-label">Mobile:</span>
+          <span className="detail-value">{booking.details.mobile}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Event:</span>
+          <span className="detail-value">
+  {formatDate(booking.details.eventDate)} at {booking.details.eventTime}, {booking.details.eventPlace}
+</span>
+
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Plates:</span>
+          <span className="detail-value">{booking.details.plates}</span>
+        </div>
+        {booking.details.pricePerPlate && (
+  <div className="detail-row">
+    <span className="detail-label">Price/Plate:</span>
+    <span className="detail-value">₹{booking.details.pricePerPlate}</span>
+  </div>
+)}
+
+      </div>
+
+      {selectedCustomer === booking.customerName && (
+        <div className="booking-expanded">
+          {!isCompleted && (
+  <div
+    className="price-input-container"
+    style={{ marginBottom: '1rem' }}
+    onClick={(e) => e.stopPropagation()}
+  >
+    <label
+      style={{ fontWeight: '500', marginBottom: '0.5rem', display: 'block' }}
+    >
+      💰 Price Per Plate (₹):
+    </label>
+    <input
+      type="number"
+      value={priceInputs[booking.customerName] || ''}
+      onChange={(e) => handlePriceChange(booking.customerName, e.target.value)}
+      placeholder="Enter price per plate"
+      style={{
+        padding: '0.5rem',
+        borderRadius: '5px',
+        border: '1px solid #ccc',
+        marginRight: '10px',
+        width: '150px',
+      }}
+    />
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        savePricePerPlate(booking);
+      }}
+      style={{
+        padding: '0.5rem 1rem',
+        backgroundColor: '#2ecc71',
+        color: 'white',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+      }}
+    >
+      OK
+    </button>
+  </div>
+)}
+
+
+
+          <div className="items-section">
+            <h4 className="section-title">🍽️ Selected Items</h4>
+            <div className="items-grid">
+              
+              {/* 1. Render other categories */}
+              {otherCategories.map(([category, items]) => (
+                <div key={category} className="category-group">
+                  <h5 className="category-title">
+                    {category.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase())}
+                  </h5>
+                  <ul className="item-list">
+                    {Object.values(items).map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+
+              {/* 2. Render Non Veg Snacks as a group */}
+              {nonVegItems.length > 0 && (
+                <div className="category-group">
+                  <h5 className="category-title">Non Veg Snacks</h5>
+                  {nonVegItems.map((cat) => (
+                    <div key={cat} style={{ marginLeft: '1rem', marginBottom: '0.75rem' }}>
+                      <h6 style={{ fontSize: '0.9rem', color: '#555', marginBottom: '0.25rem' }}>
+                        {cat.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase())}
+                      </h6>
+                      <ul className="item-list">
+                        {Object.values(allItems[cat]).map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 3. Render Veg Snacks at the very end */}
+              {vegSnacksItems && (
+                <div className="category-group">
+                  <h5 className="category-title">Veg Snacks</h5>
+                  <ul className="item-list">
+                    {Object.values(vegSnacksItems).map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {!isCompleted && (
+            <div className="action-buttons">
+              <button
+                className="btn btn-edit"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEditClick(booking);
+                }}
+              >
+                ✏️ Edit Items
+              </button>
+              <button
+                className="btn btn-email"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSendToAdmin(booking);
+                }}
+              >
+                ✅ Send to Admin
+              </button>
+              <button
+                className="btn btn-pdf"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  generatePdf(booking);
+                }}
+              >
+                📄 Download PDF
+              </button>
+              <button
+                className="btn btn-whatsapp"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const phone = booking.details.mobile.replace(/\D/g, '');
+                  const message = encodeURIComponent(
+  `*🌟 Booking Confirmation - Vijay Caterers 🌟*\n\n` +
+  `Hello *Mr/Ms ${booking.details.name}*,\n\n` +
+  `This is a confirmation of your booking with *Vijay Caterers*.\n\n` +
+  `📅 *Date:* ${formatDate(booking.details.eventDate)}\n` +
+  `📍 *Venue:* ${booking.details.eventPlace}\n` +
+  `🕒 *Time:* ${booking.details.eventTime}\n` +
+  `🍽️ *Plates:* ${booking.details.plates}\n` +
+  `💰 *Price/Plate:* ₹${booking.details.pricePerPlate || 'N/A'}\n\n` +
+  `Thank you for choosing *Vijay Caterers*! We look forward to serving you.\n\n` +
+  `If you have any updates or special requests, feel free to contact us:\n` +
+  `📞 9866937747 | 9959500833\n` +
+  `📧 vijaycaterers2005@gmail.com`
+);
+
+window.open(`https://wa.me/91${booking.details.mobile.replace(/\D/g, '')}?text=${message}`, '_blank');
+
+
+                }}
+              >
+                📱 WhatsApp
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 
   return (
     <div className="admin-panel-container">
