@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getDatabase, ref, set } from 'firebase/database';
+import { getDatabase, ref, set, get, child } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 
 function CustomerForm() {
@@ -19,23 +19,34 @@ function CustomerForm() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!customerName || !eventDate || !venue || !contactNumber || !email || !eventTime || !noOfPlates) {
-      setError('Please fill in all fields.');
-      return;
-    }
+  if (!customerName || !eventDate || !venue || !contactNumber || !email || !eventTime || !noOfPlates) {
+    setError('Please fill in all fields.');
+    return;
+  }
 
-    if (!validateEmail(email)) {
-      setError('Please enter a valid email address.');
-      return;
-    }
+  if (!validateEmail(email)) {
+    setError('Please enter a valid email address.');
+    return;
+  }
 
-    const db = getDatabase();
-    const customerRef = ref(db, `bookings/${userMobile}/${customerName}-${contactNumber}`);
+  const db = getDatabase();
 
-    set(customerRef, {
+  try {
+    const userRef = ref(db, `users/${userMobile}`);
+    const snapshot = await get(userRef);
+
+    // ✅ Fallback: If user not found, use the mobile number as the agent name
+    const agentName = snapshot.exists() && snapshot.val().name
+      ? snapshot.val().name
+      : userMobile;
+
+    const customerKey = `${customerName}-${contactNumber}`;
+    const customerRef = ref(db, `bookings/${userMobile}/${customerKey}`);
+
+    await set(customerRef, {
       details: {
         name: customerName,
         eventDate,
@@ -44,28 +55,31 @@ function CustomerForm() {
         email,
         eventTime,
         plates: noOfPlates,
+        agentName, // ✅ Saved here
       },
       items: {
         veg: [],
         nonVeg: [],
         customItems: {},
       },
-    })
-      .then(() => {
-        navigate('/select-items', {
-          state: {
-            booking: {
-              userMobile,
-              customerName: `${customerName}-${contactNumber}`,
-            },
-          },
-        });
-      })
-      .catch((error) => {
-        console.error('Error saving customer event:', error);
-        setError('Failed to save customer details.');
-      });
-  };
+    });
+
+    navigate('/select-items', {
+      state: {
+        booking: {
+          userMobile,
+          customerName: customerKey,
+        },
+      },
+    });
+
+  } catch (error) {
+    console.error('Error saving customer event:', error);
+    setError('Failed to save customer details.');
+  }
+};
+
+
 
   return (
     <div style={{ padding: '16px', maxWidth: '600px', margin: '0 auto', fontFamily: 'Segoe UI, Roboto, sans-serif' }}>

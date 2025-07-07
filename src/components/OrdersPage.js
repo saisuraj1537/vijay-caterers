@@ -478,6 +478,7 @@ const saveNote = (bookingKey, note) => {
         <p><span className="detail-label">📍 Place:</span> {booking.eventPlace}</p>
         <p><span className="detail-label">🍽️ Plates:</span> {booking.plates}</p>
         <p><span className="detail-label">💰 Price/Plate:</span> {booking.pricePerPlate}</p>
+        <p><span className="detail-label">👨‍💻 Agent/Manager:</span><span  className='agent'>{booking.agentName}</span></p>
         {notesMap[booking.key] && (
   <p><span className="detail-label">📝 Notes:</span> {notesMap[booking.key]}</p>
 )}
@@ -700,6 +701,10 @@ const saveNote = (bookingKey, note) => {
       </div>
 
       <style>{`
+      .agent {
+          color: #27ae60;
+          font-weight: 500;
+        }
         .orders-page {
           max-width: 1200px;
           margin: 0 auto;
