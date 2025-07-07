@@ -13,7 +13,7 @@ function LoginForm({ setLoggedIn, setRole }) {
     setError('');
 
     // Admin login
-    if (mobileNumber === '9999999999' && password === '1234') {
+    if (mobileNumber === '9866937747' && password === '7747') {
       localStorage.setItem('loggedIn', 'true');
       localStorage.setItem('loggedInMobile', mobileNumber);
       localStorage.setItem('role', 'admin');
