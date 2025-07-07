@@ -20,14 +20,14 @@ function SelectItemsPage() {
   const customerName = booking?.customerName;
 
   const customCategoryOrder = [
-    'sweets', 'juices', 'vegsnaks', 'hots', 'rotis',
+    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
     'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
     'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
-    'avakayalu', 'powders', 'curds', 'papads', 'salads', 'chatItems', 'chineseList',
-    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams',
+    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
+    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams','pan','soda',
     'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
     'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
-    'crabItems', 'nonVegBiryanis'
+    'crabItems', 'nonVegBiryanis', 'customItems'
   ];
 
   useEffect(() => {

@@ -27,6 +27,12 @@ function OrdersPage() {
   const [lastMonthStartDate, setLastMonthStartDate] = useState('');
   const [lastMonthEndDate, setLastMonthEndDate] = useState('');
 
+  const formatDateDMY = (dateString) => {
+  const [year, month, day] = dateString.split('-');
+  return `${day}/${month}/${year}`;
+};
+
+
   useEffect(() => {
     const bookingsRef = ref(database, 'finalBookings');
     onValue(bookingsRef, (snapshot) => {
@@ -206,10 +212,10 @@ const saveNote = (bookingKey, note) => {
     'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
     'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
     'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
-    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams',
+    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams','pan','soda',
     'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
     'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
-    'crabItems', 'nonVegBiryanis','customItems'
+    'crabItems', 'nonVegBiryanis', 'customItems'
   ];
 
   const selectedItems = booking.selectedItems || {};
@@ -293,12 +299,14 @@ const saveNote = (bookingKey, note) => {
           <p><strong>Name:</strong> ${booking.name}</p>
           <p><strong>Mobile:</strong> ${booking.mobile}</p>
           <p><strong>Email:</strong> ${booking.email}</p>
+          <p><strong>No. of Plates:</strong> ${booking.plates}</p>
         </div>
         <div style="flex: 1 1 45%;">
-          <p><strong>Event Date:</strong> ${booking.date}</p>
+          <p><strong>Event Date:</strong> ${formatDateDMY(booking.date)}</p>
           <p><strong>Event Time:</strong> ${booking.eventTime}</p>
           <p><strong>Event Place:</strong> ${booking.eventPlace}</p>
-          <p><strong>No. of Plates:</strong> ${booking.plates}</p>
+          
+          <p><strong>Price Per Plate:</strong> ₹${booking.pricePerPlate || '-'}</p>
         </div>
       </div>
     </div>
@@ -313,8 +321,20 @@ const saveNote = (bookingKey, note) => {
       </div>
     </div>
 
+    <!-- Terms and Conditions Page -->
+  <div style="page-break-before: always; padding: 40px; font-family: 'Georgia', serif; background-color: #fffbe6; border: 10px solid #f5e1a4; box-sizing: border-box; margin-top : 40px;">
+    <h2 style="text-align: center; color: #8B4513;">Terms and Conditions</h2>
+    <ul style="margin-top: 25px; color: #444; font-size: 14px; line-height: 1.7;">
+      <li>Payment can be made by cash, bank transfer, or cheque (cheque clearance is mandatory before event).</li>
+      <li>20% advance on the day of booking, 70% before 1 week of the party, and remaining balance to be paid after the event.</li>
+      <li>Final menu must be confirmed at least 5 days in advance.</li>
+      <li>Extra plates will be charged separately.</li>
+    </ul>
+    <p style="margin-top: 30px; text-align: center; font-style: italic; color: #777;">Thank you for choosing Vijay Caterers!</p>
+  </div>
+
     <!-- Footer -->
-    <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777;">
+    <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777; margin-bottom:570px">
       <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 10px;">
         <span>📍 Kukatpally, Hyderabad, Telangana</span>
         <span>📞 9866937747 / 9959500833 / 9676967747</span>
@@ -325,19 +345,6 @@ const saveNote = (bookingKey, note) => {
       </div>
       <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
     </div>
-  </div>
-
-  <!-- Terms and Conditions Page -->
-  <div style="page-break-before: always; padding: 40px; font-family: 'Georgia', serif; background-color: #fffbe6; border: 10px solid #f5e1a4; box-sizing: border-box;">
-    <h2 style="text-align: center; color: #8B4513;">Terms and Conditions</h2>
-    <ul style="margin-top: 25px; color: #444; font-size: 14px; line-height: 1.7;">
-      <li>Payment can be made by cash, UPI, bank transfer, or cheque (cheque clearance is mandatory before event).</li>
-      <li>20% advance on the day of booking, 70% before 1 week of the party, and remaining balance to be paid after the event.</li>
-      <li>Final menu must be confirmed at least 5 days in advance.</li>
-      <li>Extra plates will be charged separately.</li>
-      <li>If the party postpones or cancels the event, 10% of the total amount will be charged.</li>
-    </ul>
-    <p style="margin-top: 30px; text-align: center; font-style: italic; color: #777;">Thank you for choosing Vijay Caterers!</p>
   </div>
 `;
 
@@ -394,7 +401,7 @@ const saveNote = (bookingKey, note) => {
         `"${booking.name.replace(/"/g, '""')}"`, // Handle commas/quotes in names
         `"${booking.mobile}"`,
         `"${booking.email}"`,
-        `"${booking.date}"`,
+        `"${formatDateDMY(booking.date)}"`,
         `"${booking.eventTime}"`,
         `"${booking.eventPlace.replace(/"/g, '""')}"`, // Handle commas/quotes in places
         booking.plates
@@ -442,7 +449,7 @@ const saveNote = (bookingKey, note) => {
     'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
     'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
     'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
-    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams',
+    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams','pan','soda',
     'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
     'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
     'crabItems', 'nonVegBiryanis', 'customItems'
@@ -470,6 +477,7 @@ const saveNote = (bookingKey, note) => {
         <p><span className="detail-label">⏰ Time:</span> {booking.eventTime}</p>
         <p><span className="detail-label">📍 Place:</span> {booking.eventPlace}</p>
         <p><span className="detail-label">🍽️ Plates:</span> {booking.plates}</p>
+        <p><span className="detail-label">💰 Price/Plate:</span> {booking.pricePerPlate}</p>
         {notesMap[booking.key] && (
   <p><span className="detail-label">📝 Notes:</span> {notesMap[booking.key]}</p>
 )}
@@ -674,15 +682,11 @@ const saveNote = (bookingKey, note) => {
 
       <div className="bookings-container">
         <h2 className="bookings-title">
-          {selectedDate
-            ? `Bookings for ${new Date(selectedDate).toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}`
-            : 'Select a date to view bookings'}
-        </h2>
+  {selectedDate
+    ? `Bookings for ${formatDateDMY(selectedDate)}`
+    : 'Select a date to view bookings'}
+</h2>
+
 
         {selectedDateBookings.length === 0 ? (
           <div className="no-bookings">

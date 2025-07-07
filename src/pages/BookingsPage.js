@@ -23,13 +23,13 @@ function BookingsPage() {
     'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
     'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
     'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
-    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams',
+    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams','pan','soda',
     'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
     'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
     'crabItems', 'nonVegBiryanis', 'customItems'
   ];
 
-  const NON_VEG_SNACKS = ['chickenSnacks', 'prawnsSnacks', 'eggSnacks', 'muttonSnacks'];
+  const NON_VEG_SNACKS = ['chickenSnacks', 'prawnSnacks', 'eggSnacks', 'muttonSnacks'];
 
   const formatDate = (dateStr) => {
   if (!dateStr) return '-';
@@ -197,7 +197,7 @@ const savePricePerPlate = (booking) => {
   <div style="page-break-before: always; padding: 40px; font-family: 'Georgia', serif; background-color: #fffbe6; border: 10px solid #f5e1a4; box-sizing: border-box; margin-top : 40px;">
     <h2 style="text-align: center; color: #8B4513;">Terms and Conditions</h2>
     <ul style="margin-top: 25px; color: #444; font-size: 14px; line-height: 1.7;">
-      <li>Payment can be made by cash, UPI, bank transfer, or cheque (cheque clearance is mandatory before event).</li>
+      <li>Payment can be made by cash, bank transfer, or cheque (cheque clearance is mandatory before event).</li>
       <li>20% advance on the day of booking, 70% before 1 week of the party, and remaining balance to be paid after the event.</li>
       <li>Final menu must be confirmed at least 5 days in advance.</li>
       <li>Extra plates will be charged separately.</li>
@@ -244,12 +244,12 @@ const savePricePerPlate = (booking) => {
   };
 
 const renderBookingCard = (booking, isCompleted = false) => {
-  const itemCount = booking.items
-    ? Object.values(booking.items).reduce(
-        (total, categoryItems) => total + Object.keys(categoryItems).length,
-        0
-      )
-    : 0;
+  const itemCount = Object.values(booking.items || {}).reduce((total, categoryItems) => {
+  if (Array.isArray(categoryItems)) return total + categoryItems.length;
+  if (typeof categoryItems === 'object') return total + Object.keys(categoryItems).length;
+  return total;
+}, 0);
+
 
   const allItems = booking.items || {};
 
@@ -442,7 +442,7 @@ const renderBookingCard = (booking, isCompleted = false) => {
   `🍽️ *Plates:* ${booking.details.plates}\n` +
   `💰 *Price/Plate:* ₹${booking.details.pricePerPlate || 'N/A'}\n\n` +
   `Thank you for choosing *Vijay Caterers*! We look forward to serving you.\n\n` +
-  `If you have any updates or special requests, feel free to contact us:\n` +
+  `If you have any updates feel free to contact us:\n` +
   `📞 9866937747 | 9959500833\n` +
   `📧 vijaycaterers2005@gmail.com`
 );

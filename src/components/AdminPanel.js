@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { getDatabase, ref, onValue, remove,set } from 'firebase/database';
+import { getDatabase, ref, onValue, remove, set, update } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import emailjs from 'emailjs-com';
+import html2pdf from 'html2pdf.js';
 
 function AdminPanel() {
   const [bookings, setBookings] = useState([]);
@@ -9,6 +10,7 @@ function AdminPanel() {
   const [sendingEmailFor, setSendingEmailFor] = useState(null);
   const [expandedCustomer, setExpandedCustomer] = useState(null);
   const [filter, setFilter] = useState('upcoming'); // 'upcoming' or 'past'
+    const [priceInputs, setPriceInputs] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,6 +21,17 @@ function AdminPanel() {
       fetchUserNames();
     }
   }, []);
+
+   const CATEGORY_ORDER = [
+    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
+    'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
+    'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
+    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
+    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams','pan','soda',
+    'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
+    'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
+    'crabItems', 'nonVegBiryanis', 'customItems'
+  ];
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -35,6 +48,25 @@ function AdminPanel() {
     const date = new Date(dateStr);
     if (isNaN(date)) return false;
     return date < new Date(today.setHours(0, 0, 0, 0));
+  };
+
+  const handlePriceChange = (key, value) =>
+    setPriceInputs(prev => ({ ...prev, [key]: value }));
+
+  const savePricePerPlate = booking => {
+    const price = priceInputs[booking.customerKey];
+    if (!price) return alert('Enter a valid price per plate.');
+    const db = getDatabase();
+    update(ref(db, `finalBookings/${booking.userMobile}/${booking.customerKey}/details`), { pricePerPlate: price })
+      .then(() => setBookings(curr =>
+        curr.map(b =>
+          b.customerKey === booking.customerKey ? {
+            ...b,
+            details: { ...b.details, pricePerPlate: price }
+          } : b
+        )
+      ))
+      .catch(console.error);
   };
 
   const fetchUserNames = () => {
@@ -58,6 +90,130 @@ function AdminPanel() {
       const sorted = loaded.sort((a, b) => new Date(a.details.eventDate) - new Date(b.details.eventDate));
       setBookings(sorted);
     });
+  };
+
+   const generatePdf = (booking) => {
+    const filename = `Order_${booking.details.name.replace(/\s/g, '_')}_${formatDate(booking.details.eventDate)}.pdf`;
+  
+  
+    const categoryOrder = CATEGORY_ORDER;
+  
+    const selectedItems = booking.items || {};
+    const normalizedSelectedItems = {};
+    Object.entries(selectedItems).forEach(([key, value]) => {
+      normalizedSelectedItems[key.toLowerCase()] = value;
+    });
+  
+    const inputKeys = Object.keys(normalizedSelectedItems);
+    const orderedCategories = categoryOrder.filter(cat =>
+      inputKeys.includes(cat.toLowerCase())
+    );
+    const extraCategories = inputKeys.filter(
+      key => !categoryOrder.some(cat => cat.toLowerCase() === key)
+    );
+    const allCategories = [...orderedCategories, ...extraCategories];
+  
+    const formatCategory = (text) =>
+      text.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase());
+  
+    const itemsHtml = allCategories.map(category => {
+      const items = normalizedSelectedItems[category.toLowerCase()];
+      const itemsArray = Array.isArray(items)
+        ? items
+        : typeof items === 'object'
+          ? Object.keys(items)
+          : [];
+  
+      if (!itemsArray || itemsArray.length === 0) return '';
+  
+      const formattedItems = itemsArray.map(item =>
+        `<li style="margin: 4px 0;">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
+      ).join('');
+  
+      const formattedCategory = formatCategory(category);
+  
+      return `
+        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+          <h4 style="color: #8B4513; margin: 8px 0; font-size: 15px;">${formattedCategory}</h4>
+          <ul style="margin: 0; padding-left: 20px; color: #555; page-break-inside: avoid;">
+            ${formattedItems}
+          </ul>
+        </div>
+      `;
+    }).join('');
+  
+    const content = `
+    <div style="font-family: 'Georgia', serif; padding: 30px; color: #3c3c3c; background-color: #fffbe6; border: 10px solid #f5e1a4; box-sizing: border-box; height : 100%;">
+  
+      <!-- Header -->
+      <div style="text-align: center; margin-bottom: 25px;">
+        <h1 style="font-size: 24px; color: #b8860b;">Vijay Caterers</h1>
+        <p style="font-style: italic; color: #555;">"Elevate your event with our exceptional catering services"</p>
+      </div>
+  
+      <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+  
+      <!-- Booking Info -->
+      <div style="margin-bottom: 25px;">
+        <h2 style="color: #8B4513; font-size: 18px; margin-bottom: 12px;">Order Details</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+          <div style="flex: 1 1 45%;">
+            <p><strong>Name:</strong> ${booking.details.name}</p>
+            <p><strong>Mobile:</strong> ${booking.details.mobile}</p>
+            <p><strong>Email:</strong> ${booking.details.email || '-'}</p>
+            <p><strong>Event Date:</strong> ${formatDate(booking.details.eventDate)}</p>
+  
+          </div>
+          <div style="flex: 1 1 45%;">
+            
+            <p><strong>Event Time:</strong> ${booking.details.eventTime}</p>
+            <p><strong>Event Place:</strong> ${booking.details.eventPlace}</p>
+            <p><strong>No. of Plates:</strong> ${booking.details.plates}</p>
+            <p><strong>Price Per Plate:</strong> ₹${booking.details.pricePerPlate || '-'}</p>
+          </div>
+        </div>
+      </div>
+  
+      <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+  
+      <!-- Selected Items -->
+      <div style="margin-bottom: 30px;">
+        <h2 style="color: #8B4513; font-size: 18px;">Selected Items</h2>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+          ${itemsHtml}
+        </div>
+      </div>
+  
+      <!-- Terms and Conditions Page -->
+    <div style="page-break-before: always; padding: 40px; font-family: 'Georgia', serif; background-color: #fffbe6; border: 10px solid #f5e1a4; box-sizing: border-box; margin-top : 40px;">
+      <h2 style="text-align: center; color: #8B4513;">Terms and Conditions</h2>
+      <ul style="margin-top: 25px; color: #444; font-size: 14px; line-height: 1.7;">
+        <li>Payment can be made by cash, bank transfer, or cheque (cheque clearance is mandatory before event).</li>
+        <li>20% advance on the day of booking, 70% before 1 week of the party, and remaining balance to be paid after the event.</li>
+        <li>Final menu must be confirmed at least 5 days in advance.</li>
+        <li>Extra plates will be charged separately.</li>
+      </ul>
+      <p style="margin-top: 30px; text-align: center; font-style: italic; color: #777;">Thank you for choosing Vijay Caterers!</p>
+    </div>
+  
+      <!-- Footer -->
+      <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777; margin-bottom:570px">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 10px;">
+          <span>📍 Kukatpally, Hyderabad, Telangana</span>
+          <span>📞 9866937747 / 9959500833 / 9676967747</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px;">
+          <span>📧 <a href="mailto:vijaycaterers2005@gmail.com" style="color: #b8860b;">vijaycaterers2005@gmail.com</a></span>
+          <span>📸 Instagram: <a href="https://www.instagram.com/vijaycaterers_?igsh=Y2p3NGNmdmhhOXU%3D&utm_source=qr"  style="color: #b8860b;">@vijaycaterers_</a></span>
+        </div>
+        <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
+      </div>
+    </div>
+  
+    
+  `;
+  
+    html2pdf().from(content).save(filename);
   };
 
   const handleDelete = (userMobile, customerKey) => {
@@ -178,7 +334,14 @@ function AdminPanel() {
                 <div
                   key={customerKey}
                   className={`booking-card ${isExpanded ? 'expanded' : ''} ${isPast ? 'past-event' : ''}`}
-                  onClick={() => !isPast && toggleCard(customerKey)}
+                  onClick={(e) => {
+  if (isPast) return;
+  // prevent toggle if clicking on input, button, or their children
+  const tag = e.target.tagName.toLowerCase();
+  if (['input', 'button', 'svg', 'path', 'label'].includes(tag)) return;
+  toggleCard(customerKey);
+}}
+
                 >
                   <div className="booking-card-header">
                     <h3 className="customer-name">{details.name}</h3>
@@ -202,10 +365,27 @@ function AdminPanel() {
                       <span className="detail-label">Agent:</span>
                       <span className="detail-value agent">{takenBy}</span>
                     </div>
+                    <div className="detail-row">
+  <span className="detail-label">Price/Plate:</span>
+  <span className="detail-value">
+    ₹{details.pricePerPlate ? details.pricePerPlate : '-'}
+  </span>
+</div>
+
                   </div>
+                  
 
                   {isExpanded && !isPast && (
                     <div className="booking-expanded">
+                      <div className="price-edit">
+                      <label>Price per plate:</label>
+                      <input
+  type="number"
+  value={priceInputs[customerKey] || ''}
+  onChange={e => handlePriceChange(customerKey, e.target.value)}
+/>
+<button onClick={() => savePricePerPlate(bk)}>Save</button>
+                    </div>
                       <div className="items-section">
                         <h4 className="section-title">Selected Items</h4>
                         <div className="items-grid">
@@ -234,17 +414,47 @@ function AdminPanel() {
                         </div>
                       </div>
 
-                      <div className="action-buttons">
-                        <button className="btn btn-edit" onClick={e => { e.stopPropagation(); handleEdit(bk); }}>
-                          Edit Booking
-                        </button>
-                        <button className="btn btn-email" onClick={e => { e.stopPropagation(); sendEmail(bk); }} disabled={sendingEmailFor === customerKey}>
-                          {sendingEmailFor === customerKey ? <span className="spinner"></span> : 'Send Confirmation'}
-                        </button>
-                        <button className="btn btn-delete" onClick={e => { e.stopPropagation(); handleDelete(userMobile, customerKey); }}>
-                          Delete Booking
-                        </button>
-                      </div>
+                      <div className="action-buttons vertical">
+      <button className="btn btn-edit" onClick={e => { e.stopPropagation(); handleEdit(bk); }}>
+        ✏️ Edit Booking
+      </button>
+
+      <button className="btn btn-email" onClick={e => { e.stopPropagation(); sendEmail(bk); }} disabled={sendingEmailFor === customerKey}>
+        {sendingEmailFor === customerKey ? <span className="spinner"></span> : '📧 Send Confirmation'}
+      </button>
+
+      
+
+      <button className="btn btn-pdf" onClick={e => { e.stopPropagation(); generatePdf(bk); }}>
+        📄 Download PDF
+      </button>
+
+      <button className="btn btn-whatsapp" onClick={e => {
+        e.stopPropagation();
+        const phone = bk.details.mobile.replace(/\D/g, '');
+        const message = encodeURIComponent(
+`*🌟 Booking Confirmation - Vijay Caterers 🌟*
+
+Hello *${bk.details.name}*,
+
+📅 *Date:* ${formatDate(bk.details.eventDate)}
+📍 *Venue:* ${bk.details.eventPlace}
+🕒 *Time:* ${bk.details.eventTime}
+🍽️ *Plates:* ${bk.details.plates}
+💰 *Price/Plate:* ₹${bk.details.pricePerPlate || 'N/A'}
+
+Thank you for choosing *Vijay Caterers*! 🙏
+
+📞 9866937747 | 📧 vijaycaterers2005@gmail.com`
+        );
+        window.open(`https://wa.me/91${phone}?text=${message}`, '_blank');
+      }}>
+        📱 WhatsApp
+      </button>
+      <button className="btn btn-delete" onClick={e => { e.stopPropagation(); handleDelete(userMobile, customerKey); }}>
+        🗑️ Delete Booking
+      </button>
+    </div>
                     </div>
                   )}
                 </div>
@@ -255,6 +465,69 @@ function AdminPanel() {
       </main>
 
       <style>{`
+      .price-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1rem;
+  background: #f4f6f8;
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+
+.price-edit label {
+  font-weight: 500;
+  color: #34495e;
+  margin-right: 4px;
+}
+
+.price-edit input {
+  width: 100px;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.price-edit input:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.price-edit button {
+  background-color: #2ecc71;
+  color: white;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.price-edit button:hover {
+  background-color: #27ae60;
+}
+
+
+      .btn-pdf {
+  background: #e67e22;
+  color: white;
+}
+.btn-pdf:hover {
+  background: #ca6f1e;
+}
+
+.btn-whatsapp {
+  background: #25D366;
+  color: white;
+}
+.btn-whatsapp:hover {
+  background: #1ebe5b;
+}
+
         .filter-buttons {
           margin-top: 1rem;
           display: flex;
@@ -487,24 +760,27 @@ function AdminPanel() {
 
         .action-buttons {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  flex-direction: column; /* ensure vertical layout */
+  gap: 12px;
   margin-top: 1.5rem;
+}
+  .action-buttons.vertical {
+  flex-direction: column !important;
 }
 
         .btn {
-          padding: 0.6rem 1rem;
-          border: none;
-          border-radius: 6px;
-          font-size: 0.85rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height:36px;
-        }
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+}
 
         .btn-edit {
           background: #3498db;

@@ -20,15 +20,23 @@ function FinalSelectItemsPage() {
   const customerName = booking?.customerName;
 
   const customCategoryOrder = [
-    'sweets', 'juices', 'vegSnaks', 'hots', 'rotis',
+    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
     'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
     'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
-    'avakayalu', 'powders', 'curds', 'papads', 'salads', 'chatItems', 'chineseList',
-    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams',
-    'chickenSnacks', 'prawnsSnacks', 'eggSnacks', 'seaFoods',
-    'muttonCurries', 'eggItems', 'prawnItems', 'chickenCurries',
-    'crabItems', 'nonVegBiryanis'
+    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
+    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams','pan','soda',
+    'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
+    'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
+    'crabItems', 'nonVegBiryanis', 'customItems'
   ];
+
+  const highlightedSweets = [
+  "Annamya Laddu – అన్నమ్య లడ్డు", "Poornam – పూర్ణం", "Chakkera Pongali – చక్కెర పంగళి",
+  "Apricot Pudding – ఆప్రికాట్ పుడ్డింగ్", "Carrot Halwa – గాజరుల హల్వా",
+  "Bobbattlu – బొబ్బట్లు", "Jilebi – జిలేబీ", "Double Ka Meetha – డబుల్ కా మీథా",
+  "Gulab Jamun – గులాబ్ జామున్"
+];
+
 
   useEffect(() => {
     if (!userMobile || !customerName) return;
@@ -131,85 +139,105 @@ function FinalSelectItemsPage() {
   };
 
   const renderGroupedItems = (groupedItems) => {
-    const lowerSearch = searchTerm.toLowerCase();
+  const lowerSearch = searchTerm.toLowerCase();
 
-    const sortedEntries = Object.entries(groupedItems).sort((a, b) => {
-      const indexA = customCategoryOrder.indexOf(a[0]);
-      const indexB = customCategoryOrder.indexOf(b[0]);
+  const sortedEntries = Object.entries(groupedItems).sort((a, b) => {
+    const indexA = customCategoryOrder.indexOf(a[0]);
+    const indexB = customCategoryOrder.indexOf(b[0]);
 
-      if (indexA === -1 && indexB === -1) return a[0].localeCompare(b[0]);
-      if (indexA === -1) return 1;
-      if (indexB === -1) return -1;
-      return indexA - indexB;
-    });
+    if (indexA === -1 && indexB === -1) return a[0].localeCompare(b[0]);
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
 
-    return sortedEntries.map(([category, itemsObj]) => {
-      const categoryMatch = category.toLowerCase().includes(lowerSearch);
-      const filteredItems = Object.values(itemsObj).filter((item) =>
+  return sortedEntries.map(([category, itemsObj]) => {
+    const categoryMatch = category.toLowerCase().includes(lowerSearch);
+    let items;
+
+    if (categoryMatch) {
+      items = Object.values(itemsObj); // show all if category matches
+    } else {
+      items = Object.values(itemsObj).filter((item) =>
         item.toLowerCase().includes(lowerSearch)
       );
+    }
 
-      if (!categoryMatch && filteredItems.length === 0) return null;
+    if (!categoryMatch && items.length === 0) return null;
 
-      const itemsToDisplay = categoryMatch ? Object.values(itemsObj) : filteredItems;
-      const selectedCount = selectedItems[category]?.length || 0;
+    const selectedCount = selectedItems[category]?.length || 0;
 
-      return (
-        <div key={category} style={{ marginBottom: '24px' }}>
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: '600',
-            color: '#2b79b5',
-            marginBottom: '12px',
-            borderBottom: '2px solid #e0e0e0',
-            paddingBottom: '4px',
-          }}>
-            {category} ({selectedCount})
-          </h3>
+    // 🟡 SPECIAL SWEETS HANDLING
+    if (category === 'sweets') {
+      const highlightedSet = new Set(highlightedSweets);
+      const highlighted = highlightedSweets.filter(item => items.includes(item));
+      const nonHighlighted = items.filter(item => !highlightedSet.has(item));
+      items = [...highlighted, ...nonHighlighted];
+    }
 
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '10px',
-          }}>
-            {itemsToDisplay.map((item) => {
-              const isChecked = selectedItems[category]?.includes(item) || false;
+    return (
+      <div key={category} style={{ marginBottom: '24px' }}>
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: '600',
+          color: '#2b79b5',
+          marginBottom: '12px',
+          borderBottom: '2px solid #e0e0e0',
+          paddingBottom: '4px',
+        }}>
+          {category} ({selectedCount})
+        </h3>
 
-              return (
-                <label
-                  key={item}
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '10px',
+        }}>
+          {items.map((item) => {
+            const isChecked = selectedItems[category]?.includes(item) || false;
+            const isHighlight = category === 'sweets' && highlightedSweets.includes(item);
+
+            return (
+              <label
+                key={item}
+                style={{
+                  flex: '1 1 45%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  backgroundColor: isChecked
+                    ? '#e1f5fe'
+                    : isHighlight
+                    ? '#fff8e1'
+                    : '#fff',
+                  border: isHighlight ? '2px solid #fbc02d' : '1px solid #ddd',
+                  borderRadius: '12px',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  fontWeight: isHighlight ? '600' : 'normal',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  transition: 'all 0.2s ease-in-out',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => toggleItem(category, item)}
                   style={{
-                    flex: '1 1 45%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    backgroundColor: isChecked ? '#e1f5fe' : '#fff',
-                    border: '1px solid #ddd',
-                    borderRadius: '12px',
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-                    transition: 'all 0.2s ease-in-out',
+                    marginRight: '10px',
+                    transform: 'scale(1.3)',
                   }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleItem(category, item)}
-                    style={{
-                      marginRight: '10px',
-                      transform: 'scale(1.3)',
-                    }}
-                  />
-                  {item}
-                </label>
-              );
-            })}
-          </div>
+                />
+                {item}
+              </label>
+            );
+          })}
         </div>
-      );
-    });
-  };
+      </div>
+    );
+  });
+};
+
 
   return (
     <div style={{

@@ -134,8 +134,10 @@ function SelectField({ value, onChange }) {
         style={inputStyle}
         required
       >
+        <option value="Breakfast">Breakfast</option>
         <option value="Lunch">Lunch</option>
         <option value="Dinner">Dinner</option>
+
       </select>
     </div>
   );
