@@ -22,13 +22,8 @@ function CustomerForm() {
   const handleSubmit = async (e) => {
   e.preventDefault();
 
-  if (!customerName || !eventDate || !venue || !contactNumber || !email || !eventTime || !noOfPlates) {
-    setError('Please fill in all fields.');
-    return;
-  }
-
-  if (!validateEmail(email)) {
-    setError('Please enter a valid email address.');
+  if (!customerName || !eventDate || !venue || !contactNumber || !eventTime || !noOfPlates) {
+    setError('Please fill in all required fields.');
     return;
   }
 
@@ -38,10 +33,12 @@ function CustomerForm() {
     const userRef = ref(db, `users/${userMobile}`);
     const snapshot = await get(userRef);
 
-    // ✅ Fallback: If user not found, use the mobile number as the agent name
     const agentName = snapshot.exists() && snapshot.val().name
       ? snapshot.val().name
       : userMobile;
+
+    // Use fallback email if none provided
+    const fallbackEmail = email.trim() === '' ? 'vijaycaterer2005@gmail.com' : email;
 
     const customerKey = `${customerName}-${contactNumber}`;
     const customerRef = ref(db, `bookings/${userMobile}/${customerKey}`);
@@ -52,10 +49,10 @@ function CustomerForm() {
         eventDate,
         eventPlace: venue,
         mobile: contactNumber,
-        email,
+        email: fallbackEmail,
         eventTime,
         plates: noOfPlates,
-        agentName, // ✅ Saved here
+        agentName,
       },
       items: {
         veg: [],
@@ -92,7 +89,17 @@ function CustomerForm() {
       <form onSubmit={handleSubmit}>
         <InputField label="Customer Name" value={customerName} onChange={setCustomerName} id="customerName" placeholder="Enter customer's name" />
         <InputField label="Contact Number" value={contactNumber} onChange={setContactNumber} id="contactNumber" placeholder="Enter contact number" type="tel" />
-        <InputField label="Email Address" value={email} onChange={setEmail} id="email" placeholder="Enter email address" type="email" />
+       <InputField
+  label="Email Address"
+  value={email}
+  onChange={setEmail}
+  id="email"
+  placeholder="Enter email address (optional)"
+  type="email"
+  required={false}
+/>
+
+
         <InputField label="Event Place" value={venue} onChange={setVenue} id="venue" placeholder="Enter event venue" />
         <InputField label="Event Date" value={eventDate} onChange={setEventDate} id="eventDate" type="date" />
         <SelectField value={eventTime} onChange={setEventTime} />
@@ -119,7 +126,8 @@ function CustomerForm() {
 }
 
 // Reusable Input Field Component
-function InputField({ label, value, onChange, id, placeholder, type = 'text' }) {
+function InputField({ label, value, onChange, id, placeholder, type = 'text', required = true }) {
+
   return (
     <div style={{ marginBottom: '16px' }}>
       <label htmlFor={id} style={{ display: 'block', fontSize: '16px', marginBottom: '8px' }}>{label}</label>
