@@ -15,6 +15,8 @@ import OrdersPage from './components/OrdersPage';
 import FinalSelectItemsPage from './pages/FinelSelectItemPage';
 import AddUser from './components/AddUser';
 import NotAuthorized from './components/NotAuthorized';
+import EditCustomerForm from './components/EditCustomerForm';
+// import SelectItemsPage from './pages/SelectItemsPage';
 
 function AppContent() {
   const [loggedIn, setLoggedIn] = useState(() => localStorage.getItem('loggedIn') === 'true');
@@ -119,6 +121,10 @@ function AppContent() {
               <Route path="/booking-details" element={<BookingDetailsForm />} />
               <Route path="/select-items" element={<SelectItemsPage customerData={customerData} />} />
               <Route path="/final-select-items" element={<FinalSelectItemsPage customerData={customerData} />} />
+              {/* <Route path="/select-items" element={<SelectItemsUnifiedPage mode="initial" />} />
+              <Route path="/final-select-items" element={<SelectItemsUnifiedPage mode="final" />} /> */}
+              <Route path="/edit-details" element={<EditCustomerForm />} />
+
             </>
           )}
 

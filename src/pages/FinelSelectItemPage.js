@@ -3,8 +3,13 @@ import { getDatabase, ref, onValue, set } from 'firebase/database';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaBars } from 'react-icons/fa'; // hamburger icon
 import { ClipLoader } from "react-spinners";
+import useSpeechToText from '../components/useSpeechToText'; // Adjust path if needed
 
 function FinalSelectItemsPage() {
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+
   const [selectedItems, setSelectedItems] = useState({});
   const [details, setDetails] = useState(null);
   const [vegItemsGrouped, setVegItemsGrouped] = useState({});
@@ -42,10 +47,7 @@ const [screenWidth, setScreenWidth] = useState(window.innerWidth);
     'crabItems', 'nonVegBiryanis','nonVegSoups', 'customItems'];
 
   const highlightedSweets = [
-  "Annamya Laddu – అన్నమ్య లడ్డు", "Poornam – పూర్ణం", "Chakkera Pongali – చక్కెర పంగళి",
-  "Apricot Pudding – ఆప్రికాట్ పుడ్డింగ్", "Carrot Halwa – గాజరుల హల్వా",
-  "Bobbattlu – బొబ్బట్లు", "Jilebi – జిలేబీ", "Double Ka Meetha – డబుల్ కా మీథా",
-  "Gulab Jamun – గులాబ్ జామున్"
+  "Annamayya Laddu – అన్నమ్య లడ్డు","Poornam – పూర్ణం","Chakkara Pongali – చక్కెర పంగళి","Apricot Pudding – ఆప్రికాట్ పుడ్డింగ్","Carrot Halwa – గాజరుల హల్వా","Bobbattlu – బొబ్బట్లు","Jilebi – జిలేబీ","Double Ka Meetha – డబుల్ కా మీథా","Gulab Jamun – గులాబ్ జామున్"
 ];
 
 useEffect(() => {
@@ -113,6 +115,32 @@ useEffect(() => {
   window.addEventListener('resize', handleResize);
   return () => window.removeEventListener('resize', handleResize);
 }, []);
+
+const normalizeSearchTerm = (term) => {
+  const lowered = term.toLowerCase().trim();
+  return useSpeechToText[lowered] || term;
+};
+
+const startListening = () => {
+  if (!recognition) {
+    alert("Voice recognition not supported in this browser.");
+    return;
+  }
+
+  recognition.lang = 'en-US';
+  recognition.start();
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript.toLowerCase();
+    const normalized = useSpeechToText[transcript] || transcript;
+    setSearchTerm(normalized);
+  };
+
+  recognition.onerror = (event) => {
+    console.error("Speech recognition error:", event.error);
+  };
+};
+
 
 
 
@@ -427,21 +455,47 @@ const nonVegCategoryGroups = [
             marginBottom: '16px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
           }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <input
-              type="text"
-              placeholder="Search or add custom item..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                padding: '12px 14px',
-                width: '100%',
-                marginBottom: '12px',
-                borderRadius: '10px',
-                border: '1px solid #ccc',
-                fontSize: '16px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-              }}
-            />
+  type="text"
+  placeholder="Search or add custom item..."
+  value={searchTerm}
+  onChange={(e) => {
+    const input = e.target.value;
+    setSearchTerm(normalizeSearchTerm(input));
+  }}
+  style={{
+    flexGrow: 1,
+    padding: '12px 14px',
+    borderRadius: '10px',
+    border: '1px solid #ccc',
+    fontSize: '16px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+    marginBottom: '7px'
+  }}
+/>
+<button
+  onClick={startListening}
+  title="Speak"
+  style={{
+    background: '#2b79b5',
+    border: 'none',
+    borderRadius: '50%',
+    width: '44px',
+    height: '44px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#fff',
+    fontSize: '18px',
+    cursor: 'pointer',
+    boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+  }}
+>
+  🎤
+</button>
+</div>
+
 
             
             

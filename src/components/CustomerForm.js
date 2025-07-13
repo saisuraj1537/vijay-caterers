@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getDatabase, ref, set, get, child } from 'firebase/database';
+import { getDatabase, ref, set, get } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 
 function CustomerForm() {
@@ -14,19 +14,66 @@ function CustomerForm() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const validateEmail = (email) => {
-    // Simple regex for validating email format
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!customerName || !eventDate || !venue || !contactNumber || !eventTime || !noOfPlates) {
+      setError('Please fill in all required fields.');
+      return;
+    }
+
+    const db = getDatabase();
+
+    try {
+      const userRef = ref(db, `users/${userMobile}`);
+      const snapshot = await get(userRef);
+
+      const agentName = snapshot.exists() && snapshot.val().name
+        ? snapshot.val().name
+        : userMobile;
+
+      // Trim and use fallback email if empty
+      const trimmedEmail = email.trim();
+      const emailToSave = trimmedEmail === '' ? 'vijaycaterer2005@gmail.com' : trimmedEmail;
+
+      const customerKey = `${customerName}-${contactNumber}`;
+      const customerRef = ref(db, `bookings/${userMobile}/${customerKey}`);
+
+      await set(customerRef, {
+        details: {
+          name: customerName,
+          eventDate,
+          eventPlace: venue,
+          mobile: contactNumber,
+          email: emailToSave,
+          eventTime,
+          plates: noOfPlates,
+          agentName,
+        },
+        items: {
+          veg: [],
+          nonVeg: [],
+          customItems: {},
+        },
+      });
+
+      navigate('/select-items', {
+        state: {
+          booking: {
+            userMobile,
+            customerName: customerKey,
+          },
+        },
+      });
+
+    } catch (error) {
+      console.error('Error saving customer event:', error);
+      setError('Failed to save customer details.');
+    }
   };
 
-  const handleSubmit = async (e) => {
-  e.preventDefault();
 
-  if (!customerName || !eventDate || !venue || !contactNumber || !eventTime || !noOfPlates) {
-    setError('Please fill in all required fields.');
-    return;
-  }
-
+  const handleInstantOrder = async () => {
   const db = getDatabase();
 
   try {
@@ -37,21 +84,24 @@ function CustomerForm() {
       ? snapshot.val().name
       : userMobile;
 
-    // Use fallback email if none provided
-    const fallbackEmail = email.trim() === '' ? 'vijaycaterer2005@gmail.com' : email;
+    const timestamp = Date.now();
+    const instantCustomerKey = `InstantCustomer-${timestamp}`;
 
-    const customerKey = `${customerName}-${contactNumber}`;
-    const customerRef = ref(db, `bookings/${userMobile}/${customerKey}`);
+    const defaultContact = '0000000000';
+    const defaultEmail = 'vijaycaterer2005@gmail.com';
+    const todayDate = new Date().toISOString().split('T')[0];
+
+    const customerRef = ref(db, `bookings/${userMobile}/${instantCustomerKey}`);
 
     await set(customerRef, {
       details: {
-        name: customerName,
-        eventDate,
-        eventPlace: venue,
-        mobile: contactNumber,
-        email: fallbackEmail,
-        eventTime,
-        plates: noOfPlates,
+        name: 'Instant Order',
+        eventDate: todayDate,
+        eventPlace: 'Unknown Venue',
+        mobile: defaultContact,
+        email: defaultEmail,
+        eventTime: 'Lunch',
+        plates: '0',
         agentName,
       },
       items: {
@@ -65,17 +115,16 @@ function CustomerForm() {
       state: {
         booking: {
           userMobile,
-          customerName: customerKey,
+          customerName: instantCustomerKey,
         },
       },
     });
 
   } catch (error) {
-    console.error('Error saving customer event:', error);
-    setError('Failed to save customer details.');
+    console.error('Error creating instant order:', error);
+    setError('Failed to create instant order.');
   }
 };
-
 
 
   return (
@@ -86,20 +135,36 @@ function CustomerForm() {
 
       {error && <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
 
+      <button
+  onClick={handleInstantOrder}
+  style={{
+    padding: '10px 20px',
+    backgroundColor: '#4CAF50',
+    color: '#fff',
+    borderRadius: '20px',
+    border: 'none',
+    fontSize: '16px',
+    cursor: 'pointer',
+    width: '100%',
+    marginBottom: '20px',
+  }}
+>
+  Instant Order
+</button>
+
+
       <form onSubmit={handleSubmit}>
         <InputField label="Customer Name" value={customerName} onChange={setCustomerName} id="customerName" placeholder="Enter customer's name" />
         <InputField label="Contact Number" value={contactNumber} onChange={setContactNumber} id="contactNumber" placeholder="Enter contact number" type="tel" />
-       <InputField
-  label="Email Address"
-  value={email}
-  onChange={setEmail}
-  id="email"
-  placeholder="Enter email address (optional)"
-  type="email"
-  required={false}
-/>
-
-
+        <InputField
+          label="Email Address"
+          value={email}
+          onChange={setEmail}
+          id="email"
+          placeholder="Enter email address (optional)"
+          type="email"
+          required={false}
+        />
         <InputField label="Event Place" value={venue} onChange={setVenue} id="venue" placeholder="Enter event venue" />
         <InputField label="Event Date" value={eventDate} onChange={setEventDate} id="eventDate" type="date" />
         <SelectField value={eventTime} onChange={setEventTime} />
@@ -127,7 +192,6 @@ function CustomerForm() {
 
 // Reusable Input Field Component
 function InputField({ label, value, onChange, id, placeholder, type = 'text', required = true }) {
-
   return (
     <div style={{ marginBottom: '16px' }}>
       <label htmlFor={id} style={{ display: 'block', fontSize: '16px', marginBottom: '8px' }}>{label}</label>
@@ -138,7 +202,7 @@ function InputField({ label, value, onChange, id, placeholder, type = 'text', re
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         style={inputStyle}
-        required
+        required={required}
       />
     </div>
   );
@@ -159,7 +223,6 @@ function SelectField({ value, onChange }) {
         <option value="Breakfast">Breakfast</option>
         <option value="Lunch">Lunch</option>
         <option value="Dinner">Dinner</option>
-
       </select>
     </div>
   );

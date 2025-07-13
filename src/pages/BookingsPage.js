@@ -283,7 +283,7 @@ const renderBookingCard = (booking, isCompleted = false) => {
         <div className="detail-row">
           <span className="detail-label">Event:</span>
           <span className="detail-value">
-  {formatDate(booking.details.eventDate)} at {booking.details.eventTime}, {booking.details.eventPlace}
+  {formatDate(booking.details.eventDate)} for {booking.details.eventTime}, {booking.details.eventPlace}
 </span>
 
         </div>
@@ -401,6 +401,20 @@ const renderBookingCard = (booking, isCompleted = false) => {
           {!isCompleted && (
             <div className="action-buttons">
               <button
+  className="btn btn-edit-details"
+  onClick={(e) => {
+    e.stopPropagation();
+    navigate('/edit-details', {
+      state: {
+        booking, // contains details and customerName
+      },
+    });
+  }}
+>
+  📝 Edit Details
+</button>
+
+              <button
                 className="btn btn-edit"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -493,6 +507,15 @@ window.open(`https://wa.me/91${booking.details.mobile.replace(/\D/g, '')}?text=$
         {
           `
           /* Shared card styles */
+
+          .btn-edit-details {
+  background: #9b59b6;
+  color: white;
+}
+.btn-edit-details:hover {
+  background: #8e44ad;
+}
+
 
 .admin-panel-container {
   max-width: 1200px;
