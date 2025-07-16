@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { getDatabase, ref, set, get } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
+import { v4 as uuidv4 } from 'uuid';
+
 
 function CustomerForm() {
   const [customerName, setCustomerName] = useState('');
@@ -35,8 +37,9 @@ function CustomerForm() {
       // Trim and use fallback email if empty
       const trimmedEmail = email.trim();
       const emailToSave = trimmedEmail === '' ? 'vijaycaterer2005@gmail.com' : trimmedEmail;
+      const customerKey = `${customerName}-${contactNumber}-${uuidv4()}`;
 
-      const customerKey = `${customerName}-${contactNumber}`;
+      // const customerKey = `${customerName}-${contactNumber}`;
       const customerRef = ref(db, `bookings/${userMobile}/${customerKey}`);
 
       await set(customerRef, {

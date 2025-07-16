@@ -89,6 +89,20 @@ const savePricePerPlate = (booking) => {
   });
 };
 
+const handleDeleteBooking = (booking) => {
+  const db = getDatabase();
+  const bookingRef = ref(db, `bookings/${userPhone}/${booking.customerName}`);
+  const deleteRef = ref(db, `deleteBooking/${userPhone}/${booking.customerName}`);
+
+  set(deleteRef, {
+    details: booking.details,
+    items: booking.items || {},
+  }).then(() => {
+    remove(bookingRef);
+  });
+};
+
+
 
 
 
@@ -226,17 +240,29 @@ const savePricePerPlate = (booking) => {
   };
 
   const handleSendToAdmin = (booking) => {
-    const db = getDatabase();
-    const bookingRef = ref(db, `bookings/${userPhone}/${booking.customerName}`);
-    const finalBookingRef = ref(db, `finalBookings/${userPhone}/${booking.customerName}`);
+  const { name, mobile, eventPlace } = booking.details;
 
-    set(finalBookingRef, {
-      details: booking.details,
-      items: booking.items || {},
-    }).then(() => {
-      remove(bookingRef);
-    });
-  };
+  if (
+    name.trim().toLowerCase() === 'instant order' &&
+    mobile.trim() === '0000000000' &&
+    eventPlace.trim().toLowerCase() === 'unknown venue'
+  ) {
+    alert('Please edit the booking details before sending to admin.');
+    return;
+  }
+
+  const db = getDatabase();
+  const bookingRef = ref(db, `bookings/${userPhone}/${booking.customerName}`);
+  const finalBookingRef = ref(db, `finalBookings/${userPhone}/${booking.customerName}`);
+
+  set(finalBookingRef, {
+    details: booking.details,
+    items: booking.items || {},
+  }).then(() => {
+    remove(bookingRef);
+  });
+};
+
 
 const renderBookingCard = (booking, isCompleted = false) => {
   const itemCount = Object.values(booking.items || {}).reduce((total, categoryItems) => {
@@ -444,6 +470,19 @@ window.open(`https://wa.me/91${booking.details.mobile.replace(/\D/g, '')}?text=$
               >
                 📱 WhatsApp
               </button>
+              <button
+  className="btn btn-delete"
+  onClick={(e) => {
+    e.stopPropagation();
+    const confirmDelete = window.confirm(`Are you sure you want to delete the booking for ${booking.details.name}?`);
+    if (confirmDelete) {
+      handleDeleteBooking(booking);
+    }
+  }}
+>
+  🗑️ Delete Booking
+</button>
+
             </div>
           )}
         </div>
@@ -483,6 +522,16 @@ window.open(`https://wa.me/91${booking.details.mobile.replace(/\D/g, '')}?text=$
         {
           `
           /* Shared card styles */
+
+          .btn-delete {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
 
           .category-title {
   font-size: 1rem;
