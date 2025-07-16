@@ -3,6 +3,7 @@ import { getDatabase, ref, onValue, remove, set } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import ClipLoader from 'react-spinners/ClipLoader';
 import html2pdf from 'html2pdf.js';
+import {counters,CATEGORY_ORDER,getImageBase64} from '../components/AllTextItems'
 
 
 
@@ -17,17 +18,6 @@ function BookingsPage() {
   
 
   const userPhone = localStorage.getItem("loggedInMobile");
-
-  const CATEGORY_ORDER = [
-    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
-    'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
-    'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
-    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
-    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams','pan','soda',
-    'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
-    'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
-    'crabItems', 'nonVegBiryanis', 'customItems'
-  ];
 
   const NON_VEG_SNACKS = ['chickenSnacks', 'prawnSnacks', 'eggSnacks', 'muttonSnacks'];
 
@@ -101,9 +91,9 @@ const savePricePerPlate = (booking) => {
 
 
 
-  const generatePdf = (booking) => {
-  const filename = `Order_${booking.details.name.replace(/\s/g, '_')}_${formatDate(booking.details.eventDate)}.pdf`;
 
+ const generatePdf = async (booking) => {
+  const filename = `Order_${booking.details.name.replace(/\s/g, '_')}_${formatDate(booking.details.eventDate)}.pdf`;
 
   const categoryOrder = CATEGORY_ORDER;
 
@@ -136,94 +126,99 @@ const savePricePerPlate = (booking) => {
     if (!itemsArray || itemsArray.length === 0) return '';
 
     const formattedItems = itemsArray.map(item =>
-      `<li style="margin: 4px 0;">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
+      `<li style="margin: 2px 0; font-size: 17px; color:black; ">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
     ).join('');
 
     const formattedCategory = formatCategory(category);
 
     return `
-      <div style="margin-bottom: 15px; page-break-inside: avoid;">
-        <h4 style="color: #8B4513; margin: 8px 0; font-size: 15px;">${formattedCategory}</h4>
-        <ul style="margin: 0; padding-left: 20px; color: #555; page-break-inside: avoid;">
+      <div style="margin-bottom: 10px; page-break-inside: avoid;">
+        <h4 style="color: #8B4513; margin: 4px 0; font-size: 15px; font-weight:bold;">${formattedCategory}</h4>
+        <ul style="margin: 0; padding-left: 16px; color: #555; page-break-inside: avoid;">
           ${formattedItems}
         </ul>
       </div>
     `;
   }).join('');
 
+  const logoUrl = "https://res.cloudinary.com/dnllne8qr/image/upload/v1735446856/WhatsApp_Image_2024-12-27_at_8.13.22_PM-removebg_m3863q.png";
+  const logoBase64 = await getImageBase64(logoUrl);
+  const logoImageTag = logoBase64
+    ? `<img src="${logoBase64}" alt="Vijay Caterers Logo" style="max-width: 140px; height: auto; margin-bottom: 5px;">`
+    : '';
+
   const content = `
-  <div style="font-family: 'Georgia', serif; padding: 30px; color: #3c3c3c; background-color: #fffbe6; border: 10px solid #f5e1a4; box-sizing: border-box; height : 100%;">
+    <div style="font-family: 'Georgia', serif; font-size: 16px; color: #3c3c3c; background-color: #fffbe6; border: 8px solid #f5e1a4; box-sizing: border-box; min-height: 100vh; display: flex; flex-direction: column; padding-bottom:470px;">
+      
+      <div style="text-align: center; padding: 15px; border-bottom: 2px dashed #d2b48c;">
+        ${logoImageTag}
+        <h1 style="font-size: 26px; color: #b8860b; margin: 4px 0;">Vijay Caterers</h1>
+        <p style="font-style: italic; color: #555; margin-top: 4px;">"Elevate your event with our exceptional catering services"</p>
+      </div>
 
-    <!-- Header -->
-    <div style="text-align: center; margin-bottom: 25px;">
-      <h1 style="font-size: 24px; color: #b8860b;">Vijay Caterers</h1>
-      <p style="font-style: italic; color: #555;">"Elevate your event with our exceptional catering services"</p>
-    </div>
-
-    <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
-
-    <!-- Booking Info -->
-    <div style="margin-bottom: 25px;">
-      <h2 style="color: #8B4513; font-size: 18px; margin-bottom: 12px;">Order Details</h2>
-      <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-        <div style="flex: 1 1 45%;">
-          <p><strong>Name:</strong> ${booking.details.name}</p>
-          <p><strong>Mobile:</strong> ${booking.details.mobile}</p>
-          <p><strong>Email:</strong> ${booking.details.email || '-'}</p>
-          <p><strong>Event Date:</strong> ${formatDate(booking.details.eventDate)}</p>
-
+      <div style="flex-grow: 1; padding: 20px;">
+        <div style="margin-bottom: 15px;">
+          <h2 style="color: #8B4513; font-size: 17px; margin-bottom: 8px;">Order Details</h2>
+          <div style="display: flex; flex-wrap: wrap; gap: 16px;">
+            <div style="flex: 1 1 45%;">
+              <p style="margin: 2px 0;"><strong>Name:</strong> ${booking.details.name}</p>
+              <p style="margin: 2px 0;"><strong>Mobile:</strong> ${booking.details.mobile}</p>
+              <p style="margin: 2px 0;"><strong>Email:</strong> ${booking.details.email || '-'}</p>
+              <p style="margin: 2px 0;"><strong>Event Date:</strong> ${formatDate(booking.details.eventDate)}</p>
+            </div>
+            <div style="flex: 1 1 45%;">
+              <p style="margin: 2px 0;"><strong>Event Time:</strong> ${booking.details.eventTime}</p>
+              <p style="margin: 2px 0;"><strong>Event Place:</strong> ${booking.details.eventPlace}</p>
+              <p style="margin: 2px 0;"><strong>No. of Plates:</strong> ${booking.details.plates}</p>
+              <p style="margin: 2px 0;"><strong>Price Per Plate:</strong> ₹${booking.details.pricePerPlate || '-'}</p>
+            </div>
+          </div>
         </div>
-        <div style="flex: 1 1 45%;">
-          
-          <p><strong>Event Time:</strong> ${booking.details.eventTime}</p>
-          <p><strong>Event Place:</strong> ${booking.details.eventPlace}</p>
-          <p><strong>No. of Plates:</strong> ${booking.details.plates}</p>
-          <p><strong>Price Per Plate:</strong> ₹${booking.details.pricePerPlate || '-'}</p>
+
+        <hr style="border: 0; border-top: 1px dashed #d2b48c; margin: 15px 0;" />
+
+        <div style="margin-bottom: 20px;">
+          <h2 style="color: #8B4513; font-size: 17px; margin-bottom: 6px;">Selected Items</h2>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            ${itemsHtml}
+          </div>
         </div>
       </div>
-    </div>
 
-    <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+      <div style="page-break-before: always; padding: 30px; font-family: 'Georgia', serif; background-color: #fffbe6;  margin-top:20px; ">
+      <div style="text-align: center; padding: 15px; border-bottom: 2px dashed #d2b48c;">
+        ${logoImageTag}
+        <h1 style="font-size: 26px; color: #b8860b; margin: 4px 0;">Vijay Caterers</h1>
+        <p style="font-style: italic; color: #555; margin-top: 4px;">"Elevate your event with our exceptional catering services"</p>
+      </div>
+        <h2 style="text-align: center; color: #8B4513; margin: 10px 0;">Terms and Conditions</h2>
+        <ul style="margin-top: 15px; color: #444; font-size: 14px; line-height: 1.5; padding-left: 20px;">
+          <li style="margin: 4px 0;">Payment can be made by cash, bank transfer, or cheque (cheque clearance is mandatory before event).</li>
+          <li style="margin: 4px 0;">20% advance on the day of booking, 70% before 1 week of the party, and remaining balance to be paid after the event.</li>
+          <li style="margin: 4px 0;">Final menu must be confirmed at least 5 days in advance.</li>
+          <li style="margin: 4px 0;">Extra plates will be charged separately.</li>
+        </ul>
+        <p style="margin-top: 20px; text-align: center; font-style: italic; color: #777;">Thank you for choosing Vijay Caterers!</p>
+      </div>
 
-    <!-- Selected Items -->
-    <div style="margin-bottom: 30px;">
-      <h2 style="color: #8B4513; font-size: 18px;">Selected Items</h2>
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-        ${itemsHtml}
+      <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777;  ">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 10px;">
+          <span>📍 Kukatpally, Hyderabad, Telangana</span>
+          <span>📞 9866937747 / 9959500833 / 9676967747</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px;">
+          <span>📧 <a href="mailto:vijaycaterers2005@gmail.com" style="color: #b8860b;">vijaycaterers2005@gmail.com</a></span>
+          <span>📸 Instagram: <a href="https://www.instagram.com/vijaycaterers_?igsh=Y2p3NGNmdmhhOXU%3D&utm_source=qr" style="color: #b8860b;">@vijaycaterers_</a></span>
+        </div>
+        <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
       </div>
     </div>
-
-    <!-- Terms and Conditions Page -->
-  <div style="page-break-before: always; padding: 40px; font-family: 'Georgia', serif; background-color: #fffbe6; border: 10px solid #f5e1a4; box-sizing: border-box; margin-top : 40px;">
-    <h2 style="text-align: center; color: #8B4513;">Terms and Conditions</h2>
-    <ul style="margin-top: 25px; color: #444; font-size: 14px; line-height: 1.7;">
-      <li>Payment can be made by cash, bank transfer, or cheque (cheque clearance is mandatory before event).</li>
-      <li>20% advance on the day of booking, 70% before 1 week of the party, and remaining balance to be paid after the event.</li>
-      <li>Final menu must be confirmed at least 5 days in advance.</li>
-      <li>Extra plates will be charged separately.</li>
-    </ul>
-    <p style="margin-top: 30px; text-align: center; font-style: italic; color: #777;">Thank you for choosing Vijay Caterers!</p>
-  </div>
-
-    <!-- Footer -->
-    <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777; margin-bottom:570px">
-      <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 10px;">
-        <span>📍 Kukatpally, Hyderabad, Telangana</span>
-        <span>📞 9866937747 / 9959500833 / 9676967747</span>
-      </div>
-      <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px;">
-        <span>📧 <a href="mailto:vijaycaterers2005@gmail.com" style="color: #b8860b;">vijaycaterers2005@gmail.com</a></span>
-        <span>📸 Instagram: <a href="https://www.instagram.com/vijaycaterers_?igsh=Y2p3NGNmdmhhOXU%3D&utm_source=qr"  style="color: #b8860b;">@vijaycaterers_</a></span>
-      </div>
-      <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
     </div>
-  </div>
-
-  
-`;
+  `;
 
   html2pdf().from(content).save(filename);
 };
+
 
 
   const handleEditClick = (booking) => {
@@ -348,55 +343,36 @@ const renderBookingCard = (booking, isCompleted = false) => {
 
 
           <div className="items-section">
-            <h4 className="section-title">🍽️ Selected Items</h4>
-            <div className="items-grid">
-              
-              {/* 1. Render other categories */}
-              {otherCategories.map(([category, items]) => (
-                <div key={category} className="category-group">
-                  <h5 className="category-title">
-                    {category.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase())}
-                  </h5>
-                  <ul className="item-list">
-                    {Object.values(items).map((item, idx) => (
-                      <li key={idx}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+  <h4 className="section-title">🍽️ Selected Items</h4>
+  {counters.map((group) => {
+    const groupItems = group.categories
+      .map((category) => ({ category, items: allItems[category] }))
+      .filter((entry) => entry.items && Object.keys(entry.items).length > 0);
 
-              {/* 2. Render Non Veg Snacks as a group */}
-              {nonVegItems.length > 0 && (
-                <div className="category-group">
-                  <h5 className="category-title">Non Veg Snacks</h5>
-                  {nonVegItems.map((cat) => (
-                    <div key={cat} style={{ marginLeft: '1rem', marginBottom: '0.75rem' }}>
-                      <h6 style={{ fontSize: '0.9rem', color: '#555', marginBottom: '0.25rem' }}>
-                        {cat.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase())}
-                      </h6>
-                      <ul className="item-list">
-                        {Object.values(allItems[cat]).map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              )}
+    if (groupItems.length === 0) return null;
 
-              {/* 3. Render Veg Snacks at the very end */}
-              {vegSnacksItems && (
-                <div className="category-group">
-                  <h5 className="category-title">Veg Snacks</h5>
-                  <ul className="item-list">
-                    {Object.values(vegSnacksItems).map((item, idx) => (
-                      <li key={idx}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+    return (
+      <div key={group.title} className="category-group" style={{ marginBottom: '1rem' }}>
+        <h5 className="category-title">{group.title}</h5>
+        <div style={{ paddingLeft: '1rem' }}>
+          {groupItems.map(({ category, items }) => (
+            <div key={category} style={{ marginBottom: '0.75rem' }}>
+              <h6 style={{ fontSize: '0.9rem', color: '#555', marginBottom: '0.25rem' }}>
+                {category.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase())}
+              </h6>
+              <ul className="item-list">
+                {Object.values(items).map((item, idx) => (
+                  <li key={idx}>{item}</li>
+                ))}
+              </ul>
             </div>
-          </div>
+          ))}
+        </div>
+      </div>
+    );
+  })}
+</div>
+
 
           {!isCompleted && (
             <div className="action-buttons">
@@ -507,6 +483,16 @@ window.open(`https://wa.me/91${booking.details.mobile.replace(/\D/g, '')}?text=$
         {
           `
           /* Shared card styles */
+
+          .category-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e2e2;
+  padding-bottom: 0.25rem;
+}
+
 
           .btn-edit-details {
   background: #9b59b6;

@@ -96,7 +96,7 @@ function CustomerForm() {
     await set(customerRef, {
       details: {
         name: 'Instant Order',
-        eventDate: todayDate,
+        eventDate: '-/-/-',
         eventPlace: 'Unknown Venue',
         mobile: defaultContact,
         email: defaultEmail,

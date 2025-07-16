@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { FaBars } from 'react-icons/fa'; // hamburger icon
 import { ClipLoader } from "react-spinners";
 import useSpeechToText from '../components/useSpeechToText'; // Adjust path if needed
+import {counters,CATEGORY_ORDER} from '../components/AllTextItems'
 
 function SelectItemsPage() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -31,32 +32,22 @@ function SelectItemsPage() {
   const userMobile = booking?.userMobile || localStorage.getItem('loggedInMobile');
   const customerName = booking?.customerName;
 
-  const customCategoryOrder = [
-    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
-    'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
-    'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
-    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
-    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams','pan','soda',
-    'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
-    'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
-    'crabItems', 'nonVegBiryanis', 'customItems'
-  ];
-
   const highlightedSweets = [
     "Annamayya Laddu – అన్నమ్య లడ్డు","Poornam – పూర్ణం","Chakkara Pongali – చక్కెర పంగళి","Apricot Pudding – ఆప్రికాట్ పుడ్డింగ్","Carrot Halwa – గాజరుల హల్వా","Bobbattlu – బొబ్బట్లు","Jilebi – జిలేబీ","Double Ka Meetha – డబుల్ కా మీథా","Gulab Jamun – గులాబ్ జామున్"
   ];
 
   const vegCategoryGroups = [
     ['sweets', 'juices'],
-    ['vegSnacks', 'hots', 'rotis'],
+    ['vegSnacks', 'hots', 'rotis','vegSoups'],
     ['kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis','dalItems', 'vegFryItems'],
-    ['liquidItems', 'rotiChutneys','avakayalu', 'powders', 'curds', 'papads'],
-    ['chatItems', 'chineseList', 'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams', 'pan', 'soda']
+    ['liquidItems', 'rotiChutneys','avakayalu', 'powders', 'curds', 'papads','salads'],
+    ['chatItems', 'chineseList', 'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams', 'pan', 'soda','mocktails']
   ];
 
   const nonVegCategoryGroups = [
-    ['chickenSnacks', 'prawnSnacks', 'eggSnacks'],
-    ['nonVegBiryanis', 'chickenCurries', 'muttonCurries', 'eggItems', 'prawnsItems', 'crabItems', 'seaFoods']
+    ['nonVegSoups'],
+    ['chickenSnacks', 'prawnSnacks', 'eggSnacks','muttonSnacks'],
+    ['nonVegBiryanis', 'chickenCurries', 'muttonCurries', 'eggItems', 'prawnItems', 'crabItems', 'seaFoods','fishFry']
   ];
 
   useEffect(() => {
@@ -289,8 +280,8 @@ function SelectItemsPage() {
     const lowerSearch = searchTerm.toLowerCase();
 
     const sortedEntries = Object.entries(groupedItems).sort((a, b) => {
-      const indexA = customCategoryOrder.indexOf(a[0]);
-      const indexB = customCategoryOrder.indexOf(b[0]);
+      const indexA = CATEGORY_ORDER.indexOf(a[0]);
+      const indexB = CATEGORY_ORDER.indexOf(b[0]);
 
       if (indexA === -1 && indexB === -1) return a[0].localeCompare(b[0]);
       if (indexA === -1) return 1;
@@ -470,7 +461,7 @@ function SelectItemsPage() {
                 top: 70,
                 left: 0,
                 width: '240px',
-                height: '100%',
+                height: screenWidth < 768 ? '250px' : '90%',
                 backgroundColor: '#f7f7f7',
                 borderRight: '1px solid #ccc',
                 padding: '16px',
@@ -680,16 +671,7 @@ function SelectItemsPage() {
                   }}
                 >
                   <option value="">-- Select Category --</option>
-                  {[
-                    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
-                    'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
-                    'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
-                    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
-                    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams', 'pan', 'soda',
-                    'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
-                    'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
-                    'crabItems', 'nonVegBiryanis'
-                  ].map((cat) => (
+                  {CATEGORY_ORDER.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>

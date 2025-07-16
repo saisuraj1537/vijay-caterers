@@ -5,12 +5,14 @@ import { ref, onValue, set, runTransaction } from 'firebase/database';
 import { database } from '../firebase';
 import emailjs from 'emailjs-com';
 import html2pdf from 'html2pdf.js';
+import {CATEGORY_ORDER,counters,getImageBase64} from './AllTextItems'
 
 function OrdersPage() {
+  const today = new Date().toLocaleDateString('en-CA');
   const [eventDates, setEventDates] = useState([]);
   const [allBookings, setAllBookings] = useState([]);
   const [selectedDateBookings, setSelectedDateBookings] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(today);
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [notesMap, setNotesMap] = useState({});
   const [showDateRangePopup, setShowDateRangePopup] = useState(false);
@@ -26,6 +28,8 @@ function OrdersPage() {
   const [currentMonthEndDate, setCurrentMonthEndDate] = useState('');
   const [lastMonthStartDate, setLastMonthStartDate] = useState('');
   const [lastMonthEndDate, setLastMonthEndDate] = useState('');
+  
+
 
   const formatDateDMY = (dateString) => {
   const [year, month, day] = dateString.split('-');
@@ -48,10 +52,20 @@ function OrdersPage() {
               bookingsList.push({
                 ...value.details,
                 date: eventDate,
-                key, // Firebase key for the booking
-                selectedItems: value.items || {}, // Keep for other features if needed
+                key,
+                selectedItems: value.items || {},
               });
-              dates.push(eventDate); // Only push date if eventDate exists
+              dates.push(eventDate);
+              
+              // If this booking is for today, add it to selectedDateBookings
+              if (eventDate === today) {
+                setSelectedDateBookings(prev => [...prev, {
+                  ...value.details,
+                  date: eventDate,
+                  key,
+                  selectedItems: value.items || {},
+                }]);
+              }
             }
           });
         });
@@ -145,12 +159,14 @@ const saveNote = (bookingKey, note) => {
   };
 
   const handleDateClick = (date) => {
-    const dateStr = date.toLocaleDateString('en-CA'); // returns 'YYYY-MM-DD'
-    setSelectedDate(dateStr);
-    const filtered = allBookings.filter((booking) => booking.date === dateStr);
-    setSelectedDateBookings(filtered);
-    setExpandedIndex(null);
-  };
+  const dateStr = date.toLocaleDateString('en-CA');
+  setSelectedDate(dateStr);
+  const filtered = allBookings.filter((booking) => booking.date === dateStr);
+  setSelectedDateBookings(filtered);
+  setExpandedIndex(null);
+};
+
+  
 
   const sendThankYouEmail = (booking) => {
     const templateParams = {
@@ -204,21 +220,16 @@ const saveNote = (bookingKey, note) => {
       });
   };
 
-  const generatePdf = (booking) => {
+  const generatePdf = async (booking) => {
   const filename = `Order_${booking.name.replace(/\s/g, '_')}_${booking.date}.pdf`;
 
-  const categoryOrder = [
-    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
-    'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
-    'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
-    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
-    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams','pan','soda',
-    'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
-    'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
-    'crabItems', 'nonVegBiryanis', 'customItems'
-  ];
-
   const selectedItems = booking.selectedItems || {};
+
+  const logoUrl = "https://res.cloudinary.com/dnllne8qr/image/upload/v1735446856/WhatsApp_Image_2024-12-27_at_8.13.22_PM-removebg_m3863q.png";
+  const logoBase64 = await getImageBase64(logoUrl);
+  const logoImageTag = logoBase64
+      ? `<img src="${logoBase64}" alt="Vijay Caterers Logo" style="max-width: 140px; height: auto; margin-bottom: 5px;">`
+      : '';
 
   // Normalize input keys to lowercase map for safe matching
   const normalizedSelectedItems = {};
@@ -228,27 +239,20 @@ const saveNote = (bookingKey, note) => {
 
   const inputKeys = Object.keys(normalizedSelectedItems);
 
-  // 1. Match known categories (case-insensitive)
-  const orderedCategories = categoryOrder.filter((cat) =>
+  // Match and order categories
+  const orderedCategories = CATEGORY_ORDER.filter((cat) =>
     inputKeys.includes(cat.toLowerCase())
   );
-
-  // 2. Add unknown categories (not in categoryOrder)
   const extraCategories = inputKeys.filter(
     (inputKey) =>
-      !categoryOrder.some(
-        (orderedCat) => orderedCat.toLowerCase() === inputKey
-      )
+      !CATEGORY_ORDER.some((orderedCat) => orderedCat.toLowerCase() === inputKey)
   );
-
-  // 3. Final combined list
   const allCategories = [...orderedCategories, ...extraCategories];
 
-  // Convert camelCase to spaced and capitalized
   const formatCategory = (text) =>
     text
-      .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space before capital
-      .replace(/\b\w/g, (char) => char.toUpperCase()); // Capitalize
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
 
   const itemsHtml = allCategories
     .map((category) => {
@@ -256,23 +260,23 @@ const saveNote = (bookingKey, note) => {
       const itemsArray = Array.isArray(items)
         ? items
         : typeof items === 'object'
-          ? Object.keys(items).filter((item) => items[item])
-          : [];
+        ? Object.keys(items).filter((item) => items[item])
+        : [];
 
       if (!itemsArray || itemsArray.length === 0) return '';
 
       const formattedItems = itemsArray
         .map((item) =>
-          `<li style="margin: 4px 0;">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
+          `<li style="margin: 1px 0; font-size: 9px; line-height: 1.2;">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
         )
         .join('');
 
       const formattedCategory = formatCategory(category);
 
       return `
-        <div style="margin-bottom: 15px; page-break-inside: avoid;">
-          <h4 style="color: #8B4513; margin: 8px 0; font-size: 15px;">${formattedCategory}</h4>
-          <ul style="margin: 0; padding-left: 20px; color: #555; page-break-inside: avoid;">
+        <div style="margin-bottom: 4px; page-break-inside: avoid;">
+          <h4 style="color: #8B4513; margin: 2px 0; font-size: 10px;">${formattedCategory}</h4>
+          <ul style="margin: 0; padding-left: 12px; color: #555; page-break-inside: avoid;">
             ${formattedItems}
           </ul>
         </div>
@@ -281,77 +285,51 @@ const saveNote = (bookingKey, note) => {
     .join('');
 
   const content = `
-  <div style="font-family: 'Georgia', serif; padding: 30px; color: #3c3c3c; background-color: #fffbe6; border: 10px solid #f5e1a4; box-sizing: border-box; height : 100%;">
+  <div style="font-family: 'Georgia', serif; padding: 12px; color: #3c3c3c; background-color: #fffbe6; border: 6px solid #f5e1a4; box-sizing: border-box; font-size: 9px; line-height: 1.2;">
 
     <!-- Header -->
-    <div style="text-align: center; margin-bottom: 25px;">
-      <h1 style="font-size: 24px; color: #b8860b;">Vijay Caterers</h1>
-      <p style="font-style: italic; color: #555;">"Elevate your event with our exceptional catering services"</p>
+    <div style="text-align: center; margin-bottom: 10px;">
+    ${logoImageTag}
+      <h1 style="font-size: 14px; color: #b8860b; margin: 0;">Vijay Caterers</h1>
+      <p style="font-style: italic; color: #555; font-size: 9px; margin: 2px 0;">"Elevate your event with our exceptional catering services"</p>
     </div>
 
-    <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+    <hr style="border: 0; border-top: 1px dashed #d2b48c; margin: 6px 0;" />
 
     <!-- Booking Info -->
-    <div style="margin-bottom: 25px;">
-      <h2 style="color: #8B4513; font-size: 18px; margin-bottom: 12px;">Order Details</h2>
-      <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-        <div style="flex: 1 1 45%;">
-          <p><strong>Name:</strong> ${booking.name}</p>
-          <p><strong>Mobile:</strong> ${booking.mobile}</p>
-          <p><strong>Email:</strong> ${booking.email}</p>
-          <p><strong>No. of Plates:</strong> ${booking.plates}</p>
-        </div>
-        <div style="flex: 1 1 45%;">
-          <p><strong>Event Date:</strong> ${formatDateDMY(booking.date)}</p>
-          <p><strong>Event Time:</strong> ${booking.eventTime}</p>
-          <p><strong>Event Place:</strong> ${booking.eventPlace}</p>
-          
-          <p><strong>Price Per Plate:</strong> ₹${booking.pricePerPlate || '-'}</p>
-        </div>
-      </div>
+    <div style="margin-bottom: 10px;">
+      <h2 style="color: #8B4513; font-size: 10px; margin-bottom: 4px;">Order Details</h2>
+      <p style="margin: 2px 0;">
+        <strong>Name:</strong> ${booking.name} &nbsp; | &nbsp;
+        <strong>Mobile:</strong> ${booking.mobile} &nbsp; | &nbsp;
+        <strong>Email:</strong> ${booking.email} &nbsp; | &nbsp;
+        <strong>No. of Plates:</strong> ${booking.plates}
+      </p>
+      <p style="margin: 2px 0;">
+        <strong>Event Date:</strong> ${formatDateDMY(booking.date)} &nbsp; | &nbsp;
+        <strong>Event Time:</strong> ${booking.eventTime} &nbsp; | &nbsp;
+        <strong>Event Place:</strong> ${booking.eventPlace} &nbsp; | &nbsp;
+        <strong>Price Per Plate:</strong> ₹${booking.pricePerPlate || '-'}
+      </p>
     </div>
 
-    <hr style="border: 0; border-top: 2px dashed #d2b48c; margin: 20px 0;" />
+    <hr style="border: 0; border-top: 1px dashed #d2b48c; margin: 6px 0;" />
 
     <!-- Selected Items -->
-    <div style="margin-bottom: 30px;">
-      <h2 style="color: #8B4513; font-size: 18px;">Selected Items</h2>
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+    <div style="margin-bottom: 10px;">
+      <h2 style="color: #8B4513; font-size: 10px; margin-bottom: 4px;">Selected Items</h2>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
         ${itemsHtml}
       </div>
-    </div>
-
-    <!-- Terms and Conditions Page -->
-  <div style="page-break-before: always; padding: 40px; font-family: 'Georgia', serif; background-color: #fffbe6; border: 10px solid #f5e1a4; box-sizing: border-box; margin-top : 40px;">
-    <h2 style="text-align: center; color: #8B4513;">Terms and Conditions</h2>
-    <ul style="margin-top: 25px; color: #444; font-size: 14px; line-height: 1.7;">
-      <li>Payment can be made by cash, bank transfer, or cheque (cheque clearance is mandatory before event).</li>
-      <li>20% advance on the day of booking, 70% before 1 week of the party, and remaining balance to be paid after the event.</li>
-      <li>Final menu must be confirmed at least 5 days in advance.</li>
-      <li>Extra plates will be charged separately.</li>
-    </ul>
-    <p style="margin-top: 30px; text-align: center; font-style: italic; color: #777;">Thank you for choosing Vijay Caterers!</p>
-  </div>
-
-    <!-- Footer -->
-    <div style="border-top: 1px solid #f0e1c6; padding-top: 20px; font-size: 0.9em; text-align: center; color: #777; margin-bottom:570px">
-      <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 10px;">
-        <span>📍 Kukatpally, Hyderabad, Telangana</span>
-        <span>📞 9866937747 / 9959500833 / 9676967747</span>
-      </div>
-      <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px;">
-        <span>📧 <a href="mailto:vijaycaterers2005@gmail.com" style="color: #b8860b;">vijaycaterers2005@gmail.com</a></span>
-        <span>📸 Instagram: <a href="https://www.instagram.com/vijaycaterers_?igsh=Y2p3NGNmdmhhOXU%3D&utm_source=qr"  style="color: #b8860b;">@vijaycaterers_</a></span>
-      </div>
-      <p style="margin-top: 10px;">🌟 We appreciate your trust in our services. Have a delicious event! 🌟</p>
     </div>
   </div>
 `;
 
-
-
   html2pdf().from(content).save(filename);
 };
+
+
+
 
 
 
@@ -443,19 +421,7 @@ const saveNote = (bookingKey, note) => {
   const renderBookingCard = (booking, index) => {
   const isCompleted = !!completedBookingsMap[booking.key];
 
-  // Define your preferred order for categories
-  const categoryOrder = [
-    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
-    'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
-    'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
-    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
-    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams','pan','soda',
-    'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
-    'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
-    'crabItems', 'nonVegBiryanis', 'customItems'
-  ];
-
-  const lowerCaseCategoryOrder = categoryOrder.map(cat => cat.toLowerCase());
+  // Define your category groups with titles
 
   return (
     <div
@@ -478,83 +444,98 @@ const saveNote = (bookingKey, note) => {
         <p><span className="detail-label">📍 Place:</span> {booking.eventPlace}</p>
         <p><span className="detail-label">🍽️ Plates:</span> {booking.plates}</p>
         <p><span className="detail-label">💰 Price/Plate:</span> {booking.pricePerPlate}</p>
-        <p><span className="detail-label">👨‍💻 Agent/Manager:</span><span  className='agent'>{booking.agentName}</span></p>
+        <p><span className="detail-label">👨‍💻 Agent/Manager:</span><span className='agent'>{booking.agentName}</span></p>
         {notesMap[booking.key] && (
-  <p><span className="detail-label">📝 Notes:</span> {notesMap[booking.key]}</p>
-)}
+          <p><span className="detail-label">📝 Notes:</span> {notesMap[booking.key]}</p>
+        )}
       </div>
 
       {expandedIndex === index && (
         <div className="booking-expanded">
           <div className="items-section">
             <div className="note-section">
-  <label htmlFor={`note-${booking.key}`} className="note-label">📝 Admin Notes:</label>
-  <textarea
-  id={`note-${booking.key}`}
-  className="note-textarea"
-  value={notesMap[booking.key] || ''}
-  onClick={(e) => e.stopPropagation()} // <- This stops bubbling
-  onChange={(e) =>
-    setNotesMap((prev) => ({
-      ...prev,
-      [booking.key]: e.target.value,
-    }))
-  }
-  placeholder="Write any admin-specific notes here..."
-/>
+              <label htmlFor={`note-${booking.key}`} className="note-label">📝 Admin Notes:</label>
+              <textarea
+                id={`note-${booking.key}`}
+                className="note-textarea"
+                value={notesMap[booking.key] || ''}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) =>
+                  setNotesMap((prev) => ({
+                    ...prev,
+                    [booking.key]: e.target.value,
+                  }))
+                }
+                placeholder="Write any admin-specific notes here..."
+              />
 
-  <button
-  className="note-save-btn mb-3"
-  onClick={(e) => {
-    e.stopPropagation(); // Prevent card from collapsing
-    saveNote(booking.key, notesMap[booking.key] || '');
-  }}
->
-  ✅ Save Note
-</button>
-
-</div>
+              <button
+                className="note-save-btn mb-3"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  saveNote(booking.key, notesMap[booking.key] || '');
+                }}
+              >
+                ✅ Save Note
+              </button>
+            </div>
+            
             <h4 className="section-title">Selected Items</h4>
-            <div className="items-grid">
-              {(() => {
+            
+            <div className="category-groups-container">
+              {counters.map((group, groupIndex) => {
                 const selectedItems = booking.selectedItems || {};
-
-                // Sort categories by the preferred order
-                const sortedCategories = Object.keys(selectedItems).sort((a, b) => {
-                  const indexA = lowerCaseCategoryOrder.indexOf(a.toLowerCase());
-                  const indexB = lowerCaseCategoryOrder.indexOf(b.toLowerCase());
-                  return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
-                });
-
-                return sortedCategories.map((category) => {
+                
+                // Filter categories that exist in this booking and have items
+                const validCategories = group.categories.filter(category => {
                   const items = selectedItems[category];
+                  if (!items) return false;
+                  
                   const itemsArray = Array.isArray(items)
                     ? items
                     : typeof items === 'object'
-                    ? Object.keys(items).filter(item => items[item])
-                    : [];
-
-                  if (!itemsArray.length) return null;
-
-                  return (
-                    <div key={category} className="category-group">
-                      <h5 className="category-title">
-                        {category.replace(/([a-z])([A-Z])/g, '$1 $2')
-                                 .replace(/\b\w/g, char => char.toUpperCase())}
-                      </h5>
-                      <ul className="item-list">
-                        {itemsArray.map((item, i) => (
-                          <li key={i}>
-                            {typeof item === 'string'
-                              ? item
-                              : `${item.name} (${item.count})`}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  );
+                      ? Object.keys(items).filter(item => items[item])
+                      : [];
+                  
+                  return itemsArray.length > 0;
                 });
-              })()}
+
+                if (validCategories.length === 0) return null;
+
+                return (
+                  <div key={groupIndex} className="category-group-box">
+                    <h5 className="category-group-title">{group.title}</h5>
+                    <div className="group-items-container">
+                      {validCategories.map((category) => {
+                        const items = selectedItems[category];
+                        const itemsArray = Array.isArray(items)
+                          ? items
+                          : typeof items === 'object'
+                            ? Object.keys(items).filter(item => items[item])
+                            : [];
+
+                        return (
+                          <div key={category} className="category-item-box">
+                            <h6 className="category-title">
+                              {category.replace(/([a-z])([A-Z])/g, '$1 $2')
+                                       .replace(/\b\w/g, char => char.toUpperCase())}
+                            </h6>
+                            <ul className="item-list">
+                              {itemsArray.map((item, i) => (
+                                <li key={i}>
+                                  {typeof item === 'string'
+                                    ? item
+                                    : `${item.name} (${item.count})`}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -588,8 +569,6 @@ const saveNote = (bookingKey, note) => {
               {isCompleted ? '✔️ Order Completed' : '✓ Mark as Completed'}
             </button>
           </div>
-          
-
         </div>
       )}
     </div>
@@ -701,6 +680,58 @@ const saveNote = (bookingKey, note) => {
       </div>
 
       <style>{`
+      .category-groups-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 15px;
+}
+
+.category-group-box {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  background-color: #f9f9f9;
+}
+
+.category-group-title {
+  margin: 0 0 10px 0;
+  padding-bottom: 5px;
+  border-bottom: 1px dashed #ccc;
+  color: #8B4513;
+  font-size: 16px;
+}
+
+.group-items-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.category-item-box {
+  flex: 1 1 200px;
+  min-width: 0;
+  background-color: white;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.category-title {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+  color: #555;
+}
+
+.item-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+}
+
+.item-list li {
+  margin: 3px 0;
+}
       .agent {
           color: #27ae60;
           font-weight: 500;
