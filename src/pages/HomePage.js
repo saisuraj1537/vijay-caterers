@@ -35,16 +35,22 @@ function HomePage() {
       {/* Hero Section */}
       <section className="bg-primary text-white text-center py-5">
         <div className="container">
+          <img
+            src="https://res.cloudinary.com/dnllne8qr/image/upload/v1753611051/WhatsApp_Image_2025-07-26_at_5.02.48_PM_zil48t.png"
+            alt="Logo"
+            height="120"
+          />
           <h1 className="display-4 fw-bold">Vijay Caterers</h1>
+
           <p className="lead">Bringing taste and tradition to your events.</p>
           <a
-      href="https://drive.google.com/file/d/1DhTvCmE9cY4XJRzZxur6uTNk6MKaDx4r/view?usp=sharing"  // Replace with your actual File ID
-      target="_blank"
-      rel="noopener noreferrer"
-      className="btn btn-light mt-3"
-    >
-      View Our Menu
-    </a>
+            href="https://drive.google.com/file/d/1DhTvCmE9cY4XJRzZxur6uTNk6MKaDx4r/view?usp=sharing"  // Replace with your actual File ID
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-light mt-3"
+          >
+            View Our Menu
+          </a>
         </div>
       </section>
 

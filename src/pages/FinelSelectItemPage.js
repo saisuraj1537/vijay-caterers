@@ -82,6 +82,7 @@ function FinalSelectItemsPage() {
 
   useEffect(() => {
     const handleScroll = () => {
+      // Only hide sidebar on mobile devices (width < 768px) and only if it's currently visible
       if (sidebarVisible && window.innerWidth < 768) {
         setSidebarVisible(false);
       }
@@ -95,7 +96,12 @@ function FinalSelectItemsPage() {
     const handleResize = () => {
       const width = window.innerWidth;
       setScreenWidth(width);
-      setSidebarVisible(width >= 768); // show by default for iPad and larger
+      // Only show sidebar by default on larger screens (>= 768px)
+      if (width >= 768) {
+        setSidebarVisible(true);
+      } else {
+        setSidebarVisible(false);
+      }
     };
 
     handleResize(); // Initial check
@@ -360,12 +366,12 @@ function FinalSelectItemsPage() {
                       : isHighlight
                         ? '#fff8e1'
                         : '#fff',
-                    border: isHighlight ? '2px solid #fbc02d' : '1px solid #ddd',
+                    border: isHighlight ? '3px solid #fbc02d' : '3px solid #7d5647',
                     borderRadius: '12px',
                     padding: '10px 12px',
                     fontSize: screenWidth >= 768 && screenWidth < 1024 ? '16px' : '14px',
                     cursor: 'pointer',
-                    fontWeight: isHighlight ? '600' : 'normal',
+                    fontWeight: 550,
                     boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
                     transition: 'all 0.2s ease-in-out',
                   }}
@@ -500,15 +506,15 @@ function FinalSelectItemsPage() {
                   }}>
                     {group.map(cat => (
                       <div
-                        key={cat}
+                        key={cat.en}
                         onClick={() => {
-                          const ref = categoryRefs.current[cat];
+                          const ref = categoryRefs.current[cat.en];
                           if (ref && ref.current) {
                             const offset = 220;
                             const top = ref.current.getBoundingClientRect().top + window.scrollY - offset;
                             window.scrollTo({ top, behavior: 'smooth' });
                           }
-                          setActiveCategory(cat);
+                          setActiveCategory(cat.en);
                           if (window.innerWidth < 768) {
                             setTimeout(() => setSidebarVisible(false), 300);
                           }
@@ -516,13 +522,23 @@ function FinalSelectItemsPage() {
                         style={{
                           padding: '8px 10px',
                           cursor: 'pointer',
-                          backgroundColor: activeCategory === cat ? '#e0f7fa' : 'transparent',
+                          backgroundColor: activeCategory === cat.en ? '#e0f7fa' : 'transparent',
                           borderRadius: '6px',
                           marginBottom: '4px',
                           fontSize: screenWidth >= 768 && screenWidth < 1024 ? '16px' : '14px'
                         }}
                       >
-                        ➤ {cat}
+                        <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
+                          ➤ {cat.en}
+                        </div>
+                        <div style={{
+                          fontSize: '15px',
+                          color: '#666',
+                          fontFamily: 'Arial, sans-serif',
+                          fontWeight: 'bold'
+                        }}>
+                          {cat.te}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -540,15 +556,15 @@ function FinalSelectItemsPage() {
                   }}>
                     {group.map(cat => (
                       <div
-                        key={cat}
+                        key={cat.en}
                         onClick={() => {
-                          const ref = categoryRefs.current[cat];
+                          const ref = categoryRefs.current[cat.en];
                           if (ref && ref.current) {
                             const offset = 220;
                             const top = ref.current.getBoundingClientRect().top + window.scrollY - offset;
                             window.scrollTo({ top, behavior: 'smooth' });
                           }
-                          setActiveCategory(cat);
+                          setActiveCategory(cat.en);
                           if (window.innerWidth < 768) {
                             setTimeout(() => setSidebarVisible(false), 300);
                           }
@@ -556,13 +572,23 @@ function FinalSelectItemsPage() {
                         style={{
                           padding: '8px 10px',
                           cursor: 'pointer',
-                          backgroundColor: activeCategory === cat ? '#ffe0b2' : 'transparent',
+                          backgroundColor: activeCategory === cat.en ? '#ffe0b2' : 'transparent',
                           borderRadius: '6px',
                           marginBottom: '4px',
                           fontSize: screenWidth >= 768 && screenWidth < 1024 ? '16px' : '14px'
                         }}
                       >
-                        ➤ {cat}
+                        <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
+                          ➤ {cat.en}
+                        </div>
+                        <div style={{
+                          fontSize: '15px',
+                          color: '#666',
+                          fontFamily: 'Arial, sans-serif',
+                          fontWeight: 'bold'
+                        }}>
+                          {cat.te}
+                        </div>
                       </div>
                     ))}
                   </div>

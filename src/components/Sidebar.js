@@ -49,18 +49,27 @@ function Sidebar({
                 }}>
                     {group.map(cat => (
                         <div
-                            key={cat}
-                            onClick={() => handleCategoryClick(cat)}
+                            key={cat.en}
+                            onClick={() => handleCategoryClick(cat.en)}
                             style={{
                                 padding: '8px 10px',
                                 cursor: 'pointer',
-                                backgroundColor: activeCategory === cat ? '#e0f7fa' : 'transparent',
+                                backgroundColor: activeCategory === cat.en ? '#e0f7fa' : 'transparent',
                                 borderRadius: '6px',
                                 marginBottom: '4px',
                                 fontSize: screenWidth >= 768 && screenWidth < 1024 ? '16px' : '14px'
                             }}
                         >
-                            ➤ {cat}
+                            <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
+                                ➤ {cat.en}
+                            </div>
+                            <div style={{
+                                fontSize: '12px',
+                                color: '#666',
+                                fontFamily: 'Arial, sans-serif'
+                            }}>
+                                {cat.te}
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -77,18 +86,27 @@ function Sidebar({
                 }}>
                     {group.map(cat => (
                         <div
-                            key={cat}
-                            onClick={() => handleCategoryClick(cat)}
+                            key={cat.en}
+                            onClick={() => handleCategoryClick(cat.en)}
                             style={{
                                 padding: '8px 10px',
                                 cursor: 'pointer',
-                                backgroundColor: activeCategory === cat ? '#ffe0b2' : 'transparent',
+                                backgroundColor: activeCategory === cat.en ? '#ffe0b2' : 'transparent',
                                 borderRadius: '6px',
                                 marginBottom: '4px',
                                 fontSize: screenWidth >= 768 && screenWidth < 1024 ? '16px' : '14px'
                             }}
                         >
-                            ➤ {cat}
+                            <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
+                                ➤ {cat.en}
+                            </div>
+                            <div style={{
+                                fontSize: '12px',
+                                color: '#666',
+                                fontFamily: 'Arial, sans-serif'
+                            }}>
+                                {cat.te}
+                            </div>
                         </div>
                     ))}
                 </div>

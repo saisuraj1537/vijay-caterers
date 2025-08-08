@@ -47,20 +47,20 @@ function AppContent() {
       >
         <Container>
           <Navbar.Brand as={Link} to="/" className="d-flex align-items-center" style={{
-    fontFamily: "'Times New Roman', Times, serif",
-    fontWeight: "bold",
-    letterSpacing: "1px"
-  }}>
-          
-  <img
-    src="https://res.cloudinary.com/dnllne8qr/image/upload/v1753611051/WhatsApp_Image_2025-07-26_at_5.02.48_PM_zil48t.png"
-    alt="Logo"
-    height="40"
-    className="me-2"
-    style={{ objectFit: 'contain' }}
-  />
-  Vijay Caterers
-</Navbar.Brand>
+            fontFamily: "'Times New Roman', Times, serif",
+            fontWeight: "bold",
+            letterSpacing: "1px"
+          }}>
+
+            <img
+              src="https://res.cloudinary.com/dnllne8qr/image/upload/v1753611051/WhatsApp_Image_2025-07-26_at_5.02.48_PM_zil48t.png"
+              alt="Logo"
+              height="40"
+              className="me-2"
+              style={{ objectFit: 'contain' }}
+            />
+            Vijay Caterers
+          </Navbar.Brand>
 
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
