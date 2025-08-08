@@ -5,7 +5,7 @@ import { ref, onValue, set, runTransaction } from 'firebase/database';
 import { database } from '../firebase';
 import emailjs from 'emailjs-com';
 import html2pdf from 'html2pdf.js';
-import {CATEGORY_ORDER,counters,getImageBase64} from './AllTextItems'
+import { CATEGORY_ORDER, counters, getImageBase64 } from './AllTextItems'
 
 function OrdersPage() {
   const today = new Date().toLocaleDateString('en-CA');
@@ -28,13 +28,13 @@ function OrdersPage() {
   const [currentMonthEndDate, setCurrentMonthEndDate] = useState('');
   const [lastMonthStartDate, setLastMonthStartDate] = useState('');
   const [lastMonthEndDate, setLastMonthEndDate] = useState('');
-  
+
 
 
   const formatDateDMY = (dateString) => {
-  const [year, month, day] = dateString.split('-');
-  return `${day}/${month}/${year}`;
-};
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  };
 
 
   useEffect(() => {
@@ -56,7 +56,7 @@ function OrdersPage() {
                 selectedItems: value.items || {},
               });
               dates.push(eventDate);
-              
+
               // If this booking is for today, add it to selectedDateBookings
               if (eventDate === today) {
                 setSelectedDateBookings(prev => [...prev, {
@@ -77,50 +77,50 @@ function OrdersPage() {
   }, []);
 
   useEffect(() => {
-  const bookingsRef = ref(database, 'finalBookings');
-  const notesRef = ref(database, 'adminNotes');
+    const bookingsRef = ref(database, 'finalBookings');
+    const notesRef = ref(database, 'adminNotes');
 
-  onValue(bookingsRef, (snapshot) => {
-    const data = snapshot.val() || {};
-    const dates = [];
-    const bookingsList = [];
+    onValue(bookingsRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      const dates = [];
+      const bookingsList = [];
 
-    if (data) {
-      Object.values(data).forEach((userBookings) => {
-        Object.entries(userBookings).forEach(([key, value]) => {
-          if (value.details?.eventDate) {
-            const eventDate = value.details.eventDate;
-            bookingsList.push({
-              ...value.details,
-              date: eventDate,
-              key,
-              selectedItems: value.items || {},
-            });
-            dates.push(eventDate);
-          }
+      if (data) {
+        Object.values(data).forEach((userBookings) => {
+          Object.entries(userBookings).forEach(([key, value]) => {
+            if (value.details?.eventDate) {
+              const eventDate = value.details.eventDate;
+              bookingsList.push({
+                ...value.details,
+                date: eventDate,
+                key,
+                selectedItems: value.items || {},
+              });
+              dates.push(eventDate);
+            }
+          });
         });
-      });
-    }
+      }
 
-    setEventDates(dates);
-    setAllBookings(bookingsList);
-  });
+      setEventDates(dates);
+      setAllBookings(bookingsList);
+    });
 
-  // Fetch notes separately
-  onValue(notesRef, (snapshot) => {
-    setNotesMap(snapshot.val() || {});
-  });
-}, []);
+    // Fetch notes separately
+    onValue(notesRef, (snapshot) => {
+      setNotesMap(snapshot.val() || {});
+    });
+  }, []);
 
-const saveNote = (bookingKey, note) => {
-  const noteRef = ref(database, `adminNotes/${bookingKey}`);
-  set(noteRef, note)
-    .then(() => {
-      setNotesMap((prev) => ({ ...prev, [bookingKey]: note }));
-      alert('Note saved!');
-    })
-    .catch((err) => alert('Failed to save note: ' + err.message));
-};
+  const saveNote = (bookingKey, note) => {
+    const noteRef = ref(database, `adminNotes/${bookingKey}`);
+    set(noteRef, note)
+      .then(() => {
+        setNotesMap((prev) => ({ ...prev, [bookingKey]: note }));
+        alert('Note saved!');
+      })
+      .catch((err) => alert('Failed to save note: ' + err.message));
+  };
 
 
 
@@ -159,14 +159,14 @@ const saveNote = (bookingKey, note) => {
   };
 
   const handleDateClick = (date) => {
-  const dateStr = date.toLocaleDateString('en-CA');
-  setSelectedDate(dateStr);
-  const filtered = allBookings.filter((booking) => booking.date === dateStr);
-  setSelectedDateBookings(filtered);
-  setExpandedIndex(null);
-};
+    const dateStr = date.toLocaleDateString('en-CA');
+    setSelectedDate(dateStr);
+    const filtered = allBookings.filter((booking) => booking.date === dateStr);
+    setSelectedDateBookings(filtered);
+    setExpandedIndex(null);
+  };
 
-  
+
 
   const sendThankYouEmail = (booking) => {
     const templateParams = {
@@ -221,59 +221,59 @@ const saveNote = (bookingKey, note) => {
   };
 
   const generatePdf = async (booking) => {
-  const filename = `Order_${booking.name.replace(/\s/g, '_')}_${booking.date}.pdf`;
+    const filename = `Order_${booking.name.replace(/\s/g, '_')}_${booking.date}.pdf`;
 
-  const selectedItems = booking.selectedItems || {};
+    const selectedItems = booking.selectedItems || {};
 
-  const logoUrl = "https://res.cloudinary.com/dnllne8qr/image/upload/v1735446856/WhatsApp_Image_2024-12-27_at_8.13.22_PM-removebg_m3863q.png";
-  const logoBase64 = await getImageBase64(logoUrl);
-  const logoImageTag = logoBase64
+    const logoUrl = "https://res.cloudinary.com/dnllne8qr/image/upload/v1753611051/WhatsApp_Image_2025-07-26_at_5.02.48_PM_zil48t.png";
+    const logoBase64 = await getImageBase64(logoUrl);
+    const logoImageTag = logoBase64
       ? `<img src="${logoBase64}" alt="Vijay Caterers Logo" style="max-width: 140px; height: auto; margin-bottom: 5px;">`
       : '';
 
-  // Normalize input keys to lowercase map for safe matching
-  const normalizedSelectedItems = {};
-  Object.entries(selectedItems).forEach(([key, value]) => {
-    normalizedSelectedItems[key.toLowerCase()] = value;
-  });
+    // Normalize input keys to lowercase map for safe matching
+    const normalizedSelectedItems = {};
+    Object.entries(selectedItems).forEach(([key, value]) => {
+      normalizedSelectedItems[key.toLowerCase()] = value;
+    });
 
-  const inputKeys = Object.keys(normalizedSelectedItems);
+    const inputKeys = Object.keys(normalizedSelectedItems);
 
-  // Match and order categories
-  const orderedCategories = CATEGORY_ORDER.filter((cat) =>
-    inputKeys.includes(cat.toLowerCase())
-  );
-  const extraCategories = inputKeys.filter(
-    (inputKey) =>
-      !CATEGORY_ORDER.some((orderedCat) => orderedCat.toLowerCase() === inputKey)
-  );
-  const allCategories = [...orderedCategories, ...extraCategories];
+    // Match and order categories
+    const orderedCategories = CATEGORY_ORDER.filter((cat) =>
+      inputKeys.includes(cat.toLowerCase())
+    );
+    const extraCategories = inputKeys.filter(
+      (inputKey) =>
+        !CATEGORY_ORDER.some((orderedCat) => orderedCat.toLowerCase() === inputKey)
+    );
+    const allCategories = [...orderedCategories, ...extraCategories];
 
-  const formatCategory = (text) =>
-    text
-      .replace(/([a-z])([A-Z])/g, '$1 $2')
-      .replace(/\b\w/g, (char) => char.toUpperCase());
+    const formatCategory = (text) =>
+      text
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/\b\w/g, (char) => char.toUpperCase());
 
-  const itemsHtml = allCategories
-    .map((category) => {
-      const items = normalizedSelectedItems[category.toLowerCase()];
-      const itemsArray = Array.isArray(items)
-        ? items
-        : typeof items === 'object'
-        ? Object.keys(items).filter((item) => items[item])
-        : [];
+    const itemsHtml = allCategories
+      .map((category) => {
+        const items = normalizedSelectedItems[category.toLowerCase()];
+        const itemsArray = Array.isArray(items)
+          ? items
+          : typeof items === 'object'
+            ? Object.keys(items).filter((item) => items[item])
+            : [];
 
-      if (!itemsArray || itemsArray.length === 0) return '';
+        if (!itemsArray || itemsArray.length === 0) return '';
 
-      const formattedItems = itemsArray
-        .map((item) =>
-          `<li style="margin: 1px 0; font-size: 9px; line-height: 1.2;">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
-        )
-        .join('');
+        const formattedItems = itemsArray
+          .map((item) =>
+            `<li style="margin: 1px 0; font-size: 9px; line-height: 1.2;">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
+          )
+          .join('');
 
-      const formattedCategory = formatCategory(category);
+        const formattedCategory = formatCategory(category);
 
-      return `
+        return `
         <div style="margin-bottom: 4px; page-break-inside: avoid;">
           <h4 style="color: #8B4513; margin: 2px 0; font-size: 10px;">${formattedCategory}</h4>
           <ul style="margin: 0; padding-left: 12px; color: #555; page-break-inside: avoid;">
@@ -281,10 +281,10 @@ const saveNote = (bookingKey, note) => {
           </ul>
         </div>
       `;
-    })
-    .join('');
+      })
+      .join('');
 
-  const content = `
+    const content = `
   <div style="font-family: 'Georgia', serif; padding: 12px; color: #3c3c3c; background-color: #fffbe6; border: 6px solid #f5e1a4; box-sizing: border-box; font-size: 9px; line-height: 1.2;">
 
     <!-- Header -->
@@ -309,7 +309,7 @@ const saveNote = (bookingKey, note) => {
         <strong>Event Date:</strong> ${formatDateDMY(booking.date)} &nbsp; | &nbsp;
         <strong>Event Time:</strong> ${booking.eventTime} &nbsp; | &nbsp;
         <strong>Event Place:</strong> ${booking.eventPlace} &nbsp; | &nbsp;
-        <strong>Price Per Plate:</strong> ₹${booking.pricePerPlate || '-'}
+        <strong>price per packs:</strong> ₹${booking.pricePerPlate || '-'}
       </p>
     </div>
 
@@ -325,8 +325,8 @@ const saveNote = (bookingKey, note) => {
   </div>
 `;
 
-  html2pdf().from(content).save(filename);
-};
+    html2pdf().from(content).save(filename);
+  };
 
 
 
@@ -419,161 +419,160 @@ const saveNote = (bookingKey, note) => {
   };
 
   const renderBookingCard = (booking, index) => {
-  const isCompleted = !!completedBookingsMap[booking.key];
+    const isCompleted = !!completedBookingsMap[booking.key];
 
-  // Define your category groups with titles
+    // Define your category groups with titles
 
-  return (
-    <div
-      key={booking.key}
-      className={`booking-card ${isCompleted ? 'completed' : ''} ${
-        expandedIndex === index ? 'expanded' : ''
-      }`}
-      onClick={() => setExpandedIndex(index === expandedIndex ? null : index)}
-    >
-      <div className="booking-header">
-        <h4 className="booking-name">{booking.name}</h4>
-        <span className="booking-status">
-          {isCompleted ? '✅ Completed' : '🟡 Pending'}
-        </span>
-      </div>
+    return (
+      <div
+        key={booking.key}
+        className={`booking-card ${isCompleted ? 'completed' : ''} ${expandedIndex === index ? 'expanded' : ''
+          }`}
+        onClick={() => setExpandedIndex(index === expandedIndex ? null : index)}
+      >
+        <div className="booking-header">
+          <h4 className="booking-name">{booking.name}</h4>
+          <span className="booking-status">
+            {isCompleted ? '✅ Completed' : '🟡 Pending'}
+          </span>
+        </div>
 
-      <div className="booking-details">
-        <p><span className="detail-label">📱 Mobile:</span> {booking.mobile}</p>
-        <p><span className="detail-label">⏰ Time:</span> {booking.eventTime}</p>
-        <p><span className="detail-label">📍 Place:</span> {booking.eventPlace}</p>
-        <p><span className="detail-label">🍽️ Plates:</span> {booking.plates}</p>
-        <p><span className="detail-label">💰 Price/Plate:</span> {booking.pricePerPlate}</p>
-        <p><span className="detail-label">👨‍💻 Agent/Manager:</span><span className='agent'>{booking.agentName}</span></p>
-        {notesMap[booking.key] && (
-          <p><span className="detail-label">📝 Notes:</span> {notesMap[booking.key]}</p>
-        )}
-      </div>
+        <div className="booking-details">
+          <p><span className="detail-label">📱 Mobile:</span> {booking.mobile}</p>
+          <p><span className="detail-label">⏰ Time:</span> {booking.eventTime}</p>
+          <p><span className="detail-label">📍 Place:</span> {booking.eventPlace}</p>
+          <p><span className="detail-label">🍽️ Plates:</span> {booking.plates}</p>
+          <p><span className="detail-label">💰 Price/Plate:</span> {booking.pricePerPlate}</p>
+          <p><span className="detail-label">👨‍💻 Agent/Manager:</span><span className='agent'>{booking.agentName}</span></p>
+          {notesMap[booking.key] && (
+            <p><span className="detail-label">📝 Notes:</span> {notesMap[booking.key]}</p>
+          )}
+        </div>
 
-      {expandedIndex === index && (
-        <div className="booking-expanded">
-          <div className="items-section">
-            <div className="note-section">
-              <label htmlFor={`note-${booking.key}`} className="note-label">📝 Admin Notes:</label>
-              <textarea
-                id={`note-${booking.key}`}
-                className="note-textarea"
-                value={notesMap[booking.key] || ''}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) =>
-                  setNotesMap((prev) => ({
-                    ...prev,
-                    [booking.key]: e.target.value,
-                  }))
-                }
-                placeholder="Write any admin-specific notes here..."
-              />
+        {expandedIndex === index && (
+          <div className="booking-expanded">
+            <div className="items-section">
+              <div className="note-section">
+                <label htmlFor={`note-${booking.key}`} className="note-label">📝 Admin Notes:</label>
+                <textarea
+                  id={`note-${booking.key}`}
+                  className="note-textarea"
+                  value={notesMap[booking.key] || ''}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) =>
+                    setNotesMap((prev) => ({
+                      ...prev,
+                      [booking.key]: e.target.value,
+                    }))
+                  }
+                  placeholder="Write any admin-specific notes here..."
+                />
 
+                <button
+                  className="note-save-btn mb-3"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    saveNote(booking.key, notesMap[booking.key] || '');
+                  }}
+                >
+                  ✅ Save Note
+                </button>
+              </div>
+
+              <h4 className="section-title">Selected Items</h4>
+
+              <div className="category-groups-container">
+                {counters.map((group, groupIndex) => {
+                  const selectedItems = booking.selectedItems || {};
+
+                  // Filter categories that exist in this booking and have items
+                  const validCategories = group.categories.filter(category => {
+                    const items = selectedItems[category];
+                    if (!items) return false;
+
+                    const itemsArray = Array.isArray(items)
+                      ? items
+                      : typeof items === 'object'
+                        ? Object.keys(items).filter(item => items[item])
+                        : [];
+
+                    return itemsArray.length > 0;
+                  });
+
+                  if (validCategories.length === 0) return null;
+
+                  return (
+                    <div key={groupIndex} className="category-group-box">
+                      <h5 className="category-group-title">{group.title}</h5>
+                      <div className="group-items-container">
+                        {validCategories.map((category) => {
+                          const items = selectedItems[category];
+                          const itemsArray = Array.isArray(items)
+                            ? items
+                            : typeof items === 'object'
+                              ? Object.keys(items).filter(item => items[item])
+                              : [];
+
+                          return (
+                            <div key={category} className="category-item-box">
+                              <h6 className="category-title">
+                                {category.replace(/([a-z])([A-Z])/g, '$1 $2')
+                                  .replace(/\b\w/g, char => char.toUpperCase())}
+                              </h6>
+                              <ul className="item-list">
+                                {itemsArray.map((item, i) => (
+                                  <li key={i}>
+                                    {typeof item === 'string'
+                                      ? item
+                                      : `${item.name} (${item.count})`}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="action-buttons">
               <button
-                className="note-save-btn mb-3"
+                className="action-btn pdf-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  saveNote(booking.key, notesMap[booking.key] || '');
+                  generatePdf(booking);
                 }}
               >
-                ✅ Save Note
+                📄 Generate PDF
+              </button>
+              <button
+                className="action-btn email-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  sendThankYouEmail(booking);
+                }}
+              >
+                ✉️ Send Thank You
+              </button>
+
+              <button
+                className={`action-btn complete-btn ${isCompleted ? 'completed' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  markAsCompleted(booking);
+                }}
+              >
+                {isCompleted ? '✔️ Order Completed' : '✓ Mark as Completed'}
               </button>
             </div>
-            
-            <h4 className="section-title">Selected Items</h4>
-            
-            <div className="category-groups-container">
-              {counters.map((group, groupIndex) => {
-                const selectedItems = booking.selectedItems || {};
-                
-                // Filter categories that exist in this booking and have items
-                const validCategories = group.categories.filter(category => {
-                  const items = selectedItems[category];
-                  if (!items) return false;
-                  
-                  const itemsArray = Array.isArray(items)
-                    ? items
-                    : typeof items === 'object'
-                      ? Object.keys(items).filter(item => items[item])
-                      : [];
-                  
-                  return itemsArray.length > 0;
-                });
-
-                if (validCategories.length === 0) return null;
-
-                return (
-                  <div key={groupIndex} className="category-group-box">
-                    <h5 className="category-group-title">{group.title}</h5>
-                    <div className="group-items-container">
-                      {validCategories.map((category) => {
-                        const items = selectedItems[category];
-                        const itemsArray = Array.isArray(items)
-                          ? items
-                          : typeof items === 'object'
-                            ? Object.keys(items).filter(item => items[item])
-                            : [];
-
-                        return (
-                          <div key={category} className="category-item-box">
-                            <h6 className="category-title">
-                              {category.replace(/([a-z])([A-Z])/g, '$1 $2')
-                                       .replace(/\b\w/g, char => char.toUpperCase())}
-                            </h6>
-                            <ul className="item-list">
-                              {itemsArray.map((item, i) => (
-                                <li key={i}>
-                                  {typeof item === 'string'
-                                    ? item
-                                    : `${item.name} (${item.count})`}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
-
-          <div className="action-buttons">
-            <button
-              className="action-btn pdf-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                generatePdf(booking);
-              }}
-            >
-              📄 Generate PDF
-            </button>
-            <button
-              className="action-btn email-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                sendThankYouEmail(booking);
-              }}
-            >
-              ✉️ Send Thank You
-            </button>
-            
-            <button
-              className={`action-btn complete-btn ${isCompleted ? 'completed' : ''}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                markAsCompleted(booking);
-              }}
-            >
-              {isCompleted ? '✔️ Order Completed' : '✓ Mark as Completed'}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+        )}
+      </div>
+    );
+  };
 
 
   return (
@@ -591,81 +590,81 @@ const saveNote = (bookingKey, note) => {
         />
       </div>
 
-      <div style={{  display: 'flex', justifyContent: 'flex-end', margin: '2rem 0' }}>
-  <button
-    onClick={() => setShowDateRangePopup(true)}
-    className="download-range-btn"
-  >
-    ⬇️ Download Excel
-  </button>
-</div>
-
-{showDateRangePopup && (
-  <div className="modal-overlay" onClick={() => setShowDateRangePopup(false)}>
-    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-      <h3>Download Bookings as CSV</h3>
-      <div className="date-inputs">
-        <label htmlFor="startDate">Start Date:</label>
-        <input
-          type="date"
-          id="startDate"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="date-input-field"
-        />
-        <label htmlFor="endDate">End Date:</label>
-        <input
-          type="date"
-          id="endDate"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="date-input-field"
-        />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '2rem 0' }}>
         <button
-          onClick={() => {
-            handleDownloadDateRange(startDate, endDate, 'Custom_Range');
-            setShowDateRangePopup(false);
-          }}
+          onClick={() => setShowDateRangePopup(true)}
           className="download-range-btn"
         >
-          ⬇️ Download Custom Range CSV
+          ⬇️ Download Excel
         </button>
       </div>
 
-      <div className="quick-download-buttons">
-        <button
-          onClick={() => {
-            handleDownloadCurrentMonth();
-            setShowDateRangePopup(false);
-          }}
-          className="download-range-btn"
-        >
-          ⬇️ Download Current Month CSV
-        </button>
-        <button
-          onClick={() => {
-            handleDownloadLastMonth();
-            setShowDateRangePopup(false);
-          }}
-          className="download-range-btn"
-        >
-          ⬇️ Download Last Month CSV
-        </button>
-      </div>
-      <button className="close-modal-btn" onClick={() => setShowDateRangePopup(false)}>
-        ❌ Close
-      </button>
-    </div>
-  </div>
-)}
+      {showDateRangePopup && (
+        <div className="modal-overlay" onClick={() => setShowDateRangePopup(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Download Bookings as CSV</h3>
+            <div className="date-inputs">
+              <label htmlFor="startDate">Start Date:</label>
+              <input
+                type="date"
+                id="startDate"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="date-input-field"
+              />
+              <label htmlFor="endDate">End Date:</label>
+              <input
+                type="date"
+                id="endDate"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="date-input-field"
+              />
+              <button
+                onClick={() => {
+                  handleDownloadDateRange(startDate, endDate, 'Custom_Range');
+                  setShowDateRangePopup(false);
+                }}
+                className="download-range-btn"
+              >
+                ⬇️ Download Custom Range CSV
+              </button>
+            </div>
+
+            <div className="quick-download-buttons">
+              <button
+                onClick={() => {
+                  handleDownloadCurrentMonth();
+                  setShowDateRangePopup(false);
+                }}
+                className="download-range-btn"
+              >
+                ⬇️ Download Current Month CSV
+              </button>
+              <button
+                onClick={() => {
+                  handleDownloadLastMonth();
+                  setShowDateRangePopup(false);
+                }}
+                className="download-range-btn"
+              >
+                ⬇️ Download Last Month CSV
+              </button>
+            </div>
+            <button className="close-modal-btn" onClick={() => setShowDateRangePopup(false)}>
+              ❌ Close
+            </button>
+          </div>
+        </div>
+      )}
 
 
       <div className="bookings-container">
         <h2 className="bookings-title">
-  {selectedDate
-    ? `Bookings for ${formatDateDMY(selectedDate)}`
-    : 'Select a date to view bookings'}
-</h2>
+          {selectedDate
+            ? `Bookings for ${formatDateDMY(selectedDate)}`
+            : 'Select a date to view bookings'}
+        </h2>
 
 
         {selectedDateBookings.length === 0 ? (

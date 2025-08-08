@@ -1,43 +1,134 @@
 export const counters = [
-  
+
   {
     title: 'Non Veg Snacks',
-    categories: ['chickenSnacks', 'prawnSnacks', 'eggSnacks', 'muttonSnacks'],
+    categories: [
+      "Chicken Snacks",
+      "Prawn Snacks",
+      "Egg Snacks",
+      "Mutton Snacks"
+    ]
+    ,
   },
   {
     title: 'Main Veg Course',
     categories: [
-      'sweets', 'juices',
-      'vegSnacks', 'hots', 'rotis','vegSoups',
-      'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
-      'dalItems', 'vegFryItems',
-      'liquidItems', 'rotiChutneys','avakayalu', 'powders', 'curds', 'papads','salads'
+      "Sweets",
+      "Welcome Drinks",
+      "Veg Snacks",
+      "Hots",
+      "Rotis",
+      "Veg Soups",
+      "Kurma Curries",
+      "Special Gravy Curries",
+      "Special Rice Items",
+      "Veg Dum Biryanis",
+      "Dal Items",
+      "Veg Fry Items",
+      "Semi Liquids",
+      "Grinding Chutneys",
+      "Avakayalu",
+      "Powders",
+      "Curd",
+      "Papad",
+      "Salads"
     ]
+
   },
   {
     title: 'Main Non-Veg Course',
-    categories: ['nonVegSoups', 'nonVegBiryanis', 'chickenCurries', 'muttonCurries', 'eggItems', 'prawnItems', 'crabItems', 'seaFoods', 'fishFry']
-  },{
+    categories: [
+      "Non Veg Soups",
+      "Non Veg Biryanis",
+      "Chicken Curries",
+      "Mutton Curries",
+      "Egg Items",
+      "Prawn Items",
+      "Crab Items",
+      "Sea Foods",
+      "Fish Fry"
+    ]
+
+  }, {
     title: 'Counter 1',
-    categories: ['chatItems', 'chineseList', 'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams', 'pan', 'soda','mocktails'],
+    categories: [
+      "Chat Items",
+      "Chinese List",
+      "Italian Snacks",
+      "South Indian Tiffins",
+      "Fruits",
+      "Ice Creams",
+      "Pan",
+      "Soda",
+      "Mocktails"
+    ]
+    ,
   },
   {
-    title:'Custom Items',
-    categories:['customItems']
+    title: 'Custom Items',
+    categories: ['customItems']
   }
 ];
 
 
 export const CATEGORY_ORDER = [
-     'sweets', 'juices', 'vegSnacks', 'hots', 'rotis','vegSoups',
-    'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
-    'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
-    'avakayalu', 'powders', 'curds', 'papads','salads', 'chatItems', 'chineseList',
-    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams','pan','soda','mocktails','nonVegSoups',
-    'chickenSnacks', 'prawnSnacks', 'eggSnacks','muttonSnacks','nonVegBiryanis', 'chickenCurries', 
-    'muttonCurries', 'eggItems', 'prawnItems',
-    'crabItems','seaFoods','fishFry', 'customItems'
-  ];
+  "Sweets", "Welcome Drinks",
+  "Veg Snacks",
+  "Hots",
+  "Rotis",
+  "Veg Soups",
+  "Kurma Curries",
+  "Special Gravy Curries",
+  "Special Rice Items",
+  "Veg Dum Biryanis",
+  "Dal Items",
+  "Veg Fry Items",
+  "Semi Liquids",
+  "Grinding Chutneys",
+  "Avakayalu",
+  "Powders",
+  "Curd",
+  "Papad",
+  "Salads",
+  "Chat Items",
+  "Chinese List",
+  "Italian Snacks",
+  "South Indian Tiffins",
+  "Fruits",
+  "Ice Creams",
+  "Pan",
+  "Soda",
+  "Mocktails", "Non Veg Soups",
+  "Chicken Snacks",
+  "Prawn Snacks",
+  "Egg Snacks",
+  "Mutton Snacks",
+  "Non Veg Biryanis",
+  "Chicken Curries",
+  "Mutton Curries",
+  "Egg Items",
+  "Prawn Items",
+  "Crab Items",
+  "Sea Foods",
+  "Fish Fry", 'customItems'
+];
+
+
+export const vegCategoryGroups = [
+  ["Sweets", "Welcome Drinks"],
+  ["Veg Snacks", "Hots", "Rotis"],
+  ["Kurma Curries", "Special Gravy Curries", "Special Rice Items", "Veg Dum Biryanis", "Dal Items", "Veg Fry Items"],
+  ["Semi Liquids", "Grinding Chutneys", "Avakayalu", "Powders", "Curd", "Papad", "Salads"],
+  ["Chat Items", "Chinese List", "Italian Snacks", "South Indian Tiffins", "Fruits", "Ice Creams", "Pan", "Soda", "Mocktails"]
+]
+  ;
+
+export const nonVegCategoryGroups = [
+  ["Non Veg Soups"],
+  ["Chicken Snacks", "Prawn Snacks", "Egg Snacks", "Mutton Snacks"],
+  ["Non Veg Biryanis", "Chicken Curries", "Mutton Curries", "Egg Items", "Prawns Items", "Crab Items", "Sea Foods", "Fish Fry"]
+]
+  ;
 
 export const getImageBase64 = async (url) => {
   try {

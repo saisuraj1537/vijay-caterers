@@ -4,7 +4,7 @@ import { ref, onValue, set, runTransaction } from 'firebase/database';
 import { database } from '../firebase';
 import emailjs from 'emailjs-com';
 import html2pdf from 'html2pdf.js';
-import {CATEGORY_ORDER} from './AllTextItems' // Assuming counters is not used in rendering
+import { CATEGORY_ORDER } from './AllTextItems' // Assuming counters is not used in rendering
 
 function OrdersPage() {
   const [eventDates, setEventDates] = useState([]);
@@ -249,16 +249,16 @@ function OrdersPage() {
 
         const formattedItems = itemsArray
           .map((item) =>
-            `<li>🍽️ ${typeof item === 'string' ? item : item.name}</li>`
+            `<li style="margin: 4px 0; font-size: 14px; color: #2c3e50; line-height: 1.4; padding: 2px 0;">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
           )
           .join('');
 
         const formattedCategory = formatCategory(category);
 
         return `
-          <div>
-            <h4>${formattedCategory}</h4>
-            <ul>
+          <div style="margin-bottom: 15px; page-break-inside: avoid; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; padding: 12px; border-left: 4px solid #2b79b5;">
+            <h4 style="color: #2b79b5; margin: 0 0 8px 0; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${formattedCategory}</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #495057; page-break-inside: avoid;">
               ${formattedItems}
             </ul>
           </div>
@@ -267,37 +267,39 @@ function OrdersPage() {
       .join('');
 
     const content = `
-    <div>
+    <div style="font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif; font-size: 14px; color: #2c3e50; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border: 2px solid #e9ecef; border-radius: 12px; box-sizing: border-box; min-height: 100vh; display: flex; flex-direction: column; padding: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
 
-      <div>
-        <h1>Vijay Caterers</h1>
-        <p>"Elevate your event with our exceptional catering services"</p>
+      <div style="text-align: center; padding: 25px 20px; background: linear-gradient(135deg, #2b79b5 0%, #1e5f8a 100%); color: white; border-radius: 10px 10px 0 0; margin-bottom: 0;">
+        <h1 style="font-size: 28px; color: white; margin: 8px 0; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Vijay Caterers</h1>
+        <p style="font-style: italic; color: #e3f2fd; margin-top: 6px; font-size: 14px;">"Elevate your event with our exceptional catering services"</p>
       </div>
 
-      <hr />
-
-      <div>
-        <h2>Order Details</h2>
-        <div>
-          <div>
-            <p><strong>Name:</strong> ${booking.name}</p>
-            <p><strong>Mobile:</strong> ${booking.mobile}</p>
-            <p><strong>Email:</strong> ${booking.email}</p>
-            <p><strong>No. of Plates:</strong> ${booking.plates}</p>
+      <div style="flex-grow: 1; padding: 25px;">
+        <div style="margin-bottom: 25px; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+          <h2 style="color: #2b79b5; font-size: 18px; margin-bottom: 15px; font-weight: 600; border-bottom: 2px solid #e3f2fd; padding-bottom: 8px;">📋 Order Details</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #2b79b5;">
+              <p style="margin: 4px 0; font-size: 14px;"><strong style="color: #2b79b5;">👤 Name:</strong> <span style="color: #495057;">${booking.name}</span></p>
+              <p style="margin: 4px 0; font-size: 14px;"><strong style="color: #2b79b5;">📱 Mobile:</strong> <span style="color: #495057;">${booking.mobile}</span></p>
+              <p style="margin: 4px 0; font-size: 14px;"><strong style="color: #2b79b5;">📧 Email:</strong> <span style="color: #495057;">${booking.email}</span></p>
+              <p style="margin: 4px 0; font-size: 14px;"><strong style="color: #2b79b5;">🍽️ No. of Plates:</strong> <span style="color: #495057;">${booking.plates}</span></p>
+            </div>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #2b79b5;">
+              <p style="margin: 4px 0; font-size: 14px;"><strong style="color: #2b79b5;">📅 Event Date:</strong> <span style="color: #495057;">${formatDateDMY(booking.date)}</span></p>
+              <p style="margin: 4px 0; font-size: 14px;"><strong style="color: #2b79b5;">⏰ Event Time:</strong> <span style="color: #495057;">${booking.eventTime}</span></p>
+              <p style="margin: 4px 0; font-size: 14px;"><strong style="color: #2b79b5;">📍 Event Place:</strong> <span style="color: #495057;">${booking.eventPlace}</span></p>
+              <p style="margin: 4px 0; font-size: 14px;"><strong style="color: #2b79b5;">💰 Price per Plate:</strong> <span style="color: #495057;">₹${booking.pricePerPlate || '-'}</span></p>
+            </div>
           </div>
-          <div>
-            <p><strong>Event Date:</strong> ${formatDateDMY(booking.date)}</p>
-            <p><strong>Event Time:</strong> ${booking.eventTime}</p>
-            <p><strong>Event Place:</strong> ${booking.eventPlace}</p>
-            
-            <p><strong>Price Per Plate:</strong> ₹${booking.pricePerPlate || '-'}</p>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+          <h2 style="color: #2b79b5; font-size: 18px; margin-bottom: 15px; font-weight: 600; border-bottom: 2px solid #e3f2fd; padding-bottom: 8px;">🍽️ Selected Items</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            ${itemsHtml}
           </div>
         </div>
       </div>
-
-      <hr />
-
-      <div>
         <h2>Selected Items</h2>
         <div>
           ${itemsHtml}
@@ -429,11 +431,11 @@ function OrdersPage() {
       {
         title: 'Main Veg Course',
         categories: [
-          'sweets', 'juices',
+          'sweets', 'Welcome Drinks',
           'vegSnacks', 'hots', 'rotis',
           'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
           'dalItems', 'vegFryItems',
-          'liquidItems', 'rotiChutneys', 'avakayalu', 'powders', 'curds', 'papads', 'customItems'
+          'liquidItems', 'rotiChutneys', 'avakayalu', 'powders', 'Curd', 'Papad', 'customItems'
         ]
       },
       {

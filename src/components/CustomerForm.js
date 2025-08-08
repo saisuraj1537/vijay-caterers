@@ -77,57 +77,61 @@ function CustomerForm() {
 
 
   const handleInstantOrder = async () => {
-  const db = getDatabase();
+    const db = getDatabase();
 
-  try {
-    const userRef = ref(db, `users/${userMobile}`);
-    const snapshot = await get(userRef);
+    try {
+      const userRef = ref(db, `users/${userMobile}`);
+      const snapshot = await get(userRef);
 
-    const agentName = snapshot.exists() && snapshot.val().name
-      ? snapshot.val().name
-      : userMobile;
+      const agentName = snapshot.exists() && snapshot.val().name
+        ? snapshot.val().name
+        : userMobile;
 
-    const timestamp = Date.now();
-    const instantCustomerKey = `InstantCustomer-${timestamp}`;
+      const timestamp = Date.now();
+      const instantCustomerKey = `InstantCustomer-${timestamp}`;
 
-    const defaultContact = '0000000000';
-    const defaultEmail = 'vijaycaterer2005@gmail.com';
-    const todayDate = new Date().toISOString().split('T')[0];
+      const defaultContact = '0000000000';
+      const defaultEmail = 'vijaycaterer2005@gmail.com';
+      const today = new Date();
+      const day = String(today.getDate()).padStart(2, '0');
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const year = today.getFullYear();
+      const todayDate = `${day}/${month}/${year}`;
 
-    const customerRef = ref(db, `bookings/${userMobile}/${instantCustomerKey}`);
+      const customerRef = ref(db, `bookings/${userMobile}/${instantCustomerKey}`);
 
-    await set(customerRef, {
-      details: {
-        name: 'Instant Order',
-        eventDate: '-/-/-',
-        eventPlace: 'Unknown Venue',
-        mobile: defaultContact,
-        email: defaultEmail,
-        eventTime: 'Lunch',
-        plates: '0',
-        agentName,
-      },
-      items: {
-        veg: [],
-        nonVeg: [],
-        customItems: {},
-      },
-    });
-
-    navigate('/select-items', {
-      state: {
-        booking: {
-          userMobile,
-          customerName: instantCustomerKey,
+      await set(customerRef, {
+        details: {
+          name: `Instant Order ${todayDate}`,
+          eventDate: '-/-/-',
+          eventPlace: 'Unknown Venue',
+          mobile: defaultContact,
+          email: defaultEmail,
+          eventTime: 'Lunch',
+          plates: '0',
+          agentName,
         },
-      },
-    });
+        items: {
+          veg: [],
+          nonVeg: [],
+          customItems: {},
+        },
+      });
 
-  } catch (error) {
-    console.error('Error creating instant order:', error);
-    setError('Failed to create instant order.');
-  }
-};
+      navigate('/select-items', {
+        state: {
+          booking: {
+            userMobile,
+            customerName: instantCustomerKey,
+          },
+        },
+      });
+
+    } catch (error) {
+      console.error('Error creating instant order:', error);
+      setError('Failed to create instant order.');
+    }
+  };
 
 
   return (
@@ -139,21 +143,21 @@ function CustomerForm() {
       {error && <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
 
       <button
-  onClick={handleInstantOrder}
-  style={{
-    padding: '10px 20px',
-    backgroundColor: '#4CAF50',
-    color: '#fff',
-    borderRadius: '20px',
-    border: 'none',
-    fontSize: '16px',
-    cursor: 'pointer',
-    width: '100%',
-    marginBottom: '20px',
-  }}
->
-  Instant Order
-</button>
+        onClick={handleInstantOrder}
+        style={{
+          padding: '10px 20px',
+          backgroundColor: '#4CAF50',
+          color: '#fff',
+          borderRadius: '20px',
+          border: 'none',
+          fontSize: '16px',
+          cursor: 'pointer',
+          width: '100%',
+          marginBottom: '20px',
+        }}
+      >
+        Instant Order
+      </button>
 
 
       <form onSubmit={handleSubmit}>

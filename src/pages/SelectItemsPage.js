@@ -4,7 +4,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { FaBars } from 'react-icons/fa'; // hamburger icon
 import { ClipLoader } from "react-spinners";
 import useSpeechToText from '../components/useSpeechToText'; // Adjust path if needed
-import {counters,CATEGORY_ORDER} from '../components/AllTextItems'
+import { counters, CATEGORY_ORDER, getImageBase64, vegCategoryGroups, nonVegCategoryGroups } from '../components/AllTextItems'
+
 
 function SelectItemsPage() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -33,21 +34,7 @@ function SelectItemsPage() {
   const customerName = booking?.customerName;
 
   const highlightedSweets = [
-    "Annamayya Laddu – అన్నమ్య లడ్డు","Poornam – పూర్ణం","Chakkara Pongali – చక్కెర పంగళి","Apricot Pudding – ఆప్రికాట్ పుడ్డింగ్","Carrot Halwa – గాజరుల హల్వా","Bobbattlu – బొబ్బట్లు","Jilebi – జిలేబీ","Double Ka Meetha – డబుల్ కా మీథా","Gulab Jamun – గులాబ్ జామున్"
-  ];
-
-  const vegCategoryGroups = [
-    ['sweets', 'juices'],
-    ['vegSnacks', 'hots', 'rotis','vegSoups'],
-    ['kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis','dalItems', 'vegFryItems'],
-    ['liquidItems', 'rotiChutneys','avakayalu', 'powders', 'curds', 'papads','salads'],
-    ['chatItems', 'chineseList', 'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams', 'pan', 'soda','mocktails']
-  ];
-
-  const nonVegCategoryGroups = [
-    ['nonVegSoups'],
-    ['chickenSnacks', 'prawnSnacks', 'eggSnacks','muttonSnacks'],
-    ['nonVegBiryanis', 'chickenCurries', 'muttonCurries', 'eggItems', 'prawnItems', 'crabItems', 'seaFoods','fishFry']
+    "Annamayya Laddu – అన్నమ్య లడ్డు", "Poornam – పూర్ణం", "Chakkara Pongali – చక్కెర పంగళి", "Apricot Pudding – ఆప్రికాట్ పుడ్డింగ్", "Carrot Halwa – గాజరుల హల్వా", "Bobbattlu – బొబ్బట్లు", "Jilebi – జిలేబీ", "Double Ka Meetha – డబుల్ కా మీథా", "Gulab Jamun – గులాబ్ జామున్"
   ];
 
   useEffect(() => {
@@ -305,7 +292,7 @@ function SelectItemsPage() {
 
       const selectedCount = selectedItems[category]?.length || 0;
 
-      if (category === 'sweets') {
+      if (category === 'Sweets') {
         const highlightedSet = new Set(highlightedSweets);
         const highlighted = highlightedSweets.filter(item => items.includes(item));
         const nonHighlighted = items.filter(item => !highlightedSet.has(item));
@@ -319,7 +306,7 @@ function SelectItemsPage() {
       return (
         <div key={category} ref={categoryRefs.current[category]} style={{ marginBottom: '24px' }}>
           <h3 style={{
-            fontSize: '18px',
+            fontSize: screenWidth >= 768 && screenWidth < 1024 ? '22px' : '18px',
             fontWeight: '600',
             color: '#2b79b5',
             marginBottom: '12px',
@@ -336,7 +323,7 @@ function SelectItemsPage() {
           }}>
             {items.map((item) => {
               const isChecked = selectedItems[category]?.includes(item) || false;
-              const isHighlight = category === 'sweets' && highlightedSweets.includes(item);
+              const isHighlight = category === 'Sweets' && highlightedSweets.includes(item);
 
               return (
                 <label
@@ -353,7 +340,7 @@ function SelectItemsPage() {
                     border: isHighlight ? '2px solid #fbc02d' : '1px solid #ddd',
                     borderRadius: '12px',
                     padding: '10px 12px',
-                    fontSize: '14px',
+                    fontSize: screenWidth >= 768 && screenWidth < 1024 ? '16px' : '14px',
                     cursor: 'pointer',
                     fontWeight: isHighlight ? '600' : 'normal',
                     boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
@@ -388,7 +375,12 @@ function SelectItemsPage() {
       paddingLeft: sidebarVisible && screenWidth >= 768 ? '220px' : '16px',
       transition: 'padding-left 0.3s ease',
     }}>
-      <h2 style={{ fontSize: '22px', fontWeight: '600', marginBottom: '10px', textAlign: 'center' }}>
+      <h2 style={{
+        fontSize: screenWidth >= 768 && screenWidth < 1024 ? '26px' : '22px',
+        fontWeight: '600',
+        marginBottom: '10px',
+        textAlign: 'center'
+      }}>
         Select Food Items for <span style={{ color: '#2b79b5' }}>{customerName}</span>
       </h2>
 
@@ -428,7 +420,7 @@ function SelectItemsPage() {
                   padding: '12px 14px',
                   borderRadius: '10px',
                   border: '1px solid #ccc',
-                  fontSize: '16px',
+                  fontSize: screenWidth >= 768 && screenWidth < 1024 ? '18px' : '16px',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                   marginBottom: '7px'
                 }}
@@ -499,7 +491,7 @@ function SelectItemsPage() {
                           backgroundColor: activeCategory === cat ? '#e0f7fa' : 'transparent',
                           borderRadius: '6px',
                           marginBottom: '4px',
-                          fontSize: '14px'
+                          fontSize: screenWidth >= 768 && screenWidth < 1024 ? '16px' : '14px'
                         }}
                       >
                         ➤ {cat}
@@ -538,7 +530,7 @@ function SelectItemsPage() {
                           backgroundColor: activeCategory === cat ? '#ffe0b2' : 'transparent',
                           borderRadius: '6px',
                           marginBottom: '4px',
-                          fontSize: '14px'
+                          fontSize: screenWidth >= 768 && screenWidth < 1024 ? '16px' : '14px'
                         }}
                       >
                         ➤ {cat}
@@ -594,7 +586,7 @@ function SelectItemsPage() {
                     color: filter === cat ? '#fff' : '#333',
                     borderRadius: '20px',
                     border: 'none',
-                    fontSize: '14px',
+                    fontSize: screenWidth >= 768 && screenWidth < 1024 ? '16px' : '14px',
                     cursor: 'pointer',
                     fontWeight: '500',
                     transition: 'all 0.2s',
@@ -615,7 +607,7 @@ function SelectItemsPage() {
                     color: '#fff',
                     borderRadius: '20px',
                     border: 'none',
-                    fontSize: '14px',
+                    fontSize: screenWidth >= 768 && screenWidth < 1024 ? '16px' : '14px',
                     cursor: 'pointer',
                   }}
                 >
@@ -654,7 +646,10 @@ function SelectItemsPage() {
                 width: '90%',
                 boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
               }}>
-                <h3 style={{ marginBottom: '12px' }}>
+                <h3 style={{
+                  marginBottom: '12px',
+                  fontSize: screenWidth >= 768 && screenWidth < 1024 ? '20px' : '16px'
+                }}>
                   Add "<span style={{ color: '#2b79b5' }}>{pendingCustomItem}</span>" to which category?
                 </h3>
 
@@ -667,7 +662,7 @@ function SelectItemsPage() {
                     borderRadius: '8px',
                     border: '1px solid #ccc',
                     marginBottom: '16px',
-                    fontSize: '16px'
+                    fontSize: screenWidth >= 768 && screenWidth < 1024 ? '18px' : '16px'
                   }}
                 >
                   <option value="">-- Select Category --</option>
@@ -685,7 +680,7 @@ function SelectItemsPage() {
                       color: '#333',
                       border: 'none',
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: screenWidth >= 768 && screenWidth < 1024 ? '16px' : '14px',
                       cursor: 'pointer'
                     }}
                   >
@@ -700,7 +695,7 @@ function SelectItemsPage() {
                       color: '#fff',
                       border: 'none',
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: screenWidth >= 768 && screenWidth < 1024 ? '16px' : '14px',
                       cursor: 'pointer'
                     }}
                   >

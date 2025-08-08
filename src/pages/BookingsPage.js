@@ -3,7 +3,7 @@ import { getDatabase, ref, onValue, remove, set } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import ClipLoader from 'react-spinners/ClipLoader';
 import html2pdf from 'html2pdf.js';
-import {counters,CATEGORY_ORDER,getImageBase64} from '../components/AllTextItems'
+import { counters, CATEGORY_ORDER, getImageBase64 } from '../components/AllTextItems'
 
 
 
@@ -15,17 +15,17 @@ function BookingsPage() {
   const navigate = useNavigate();
   const [priceInputs, setPriceInputs] = useState({});
 
-  
+
 
   const userPhone = localStorage.getItem("loggedInMobile");
 
-  const NON_VEG_SNACKS = ['chickenSnacks', 'prawnSnacks', 'eggSnacks', 'muttonSnacks'];
+  const NON_VEG_SNACKS = ['Chicken Snacks', 'Prawn Snacks', 'Egg Snacks', 'Mutton Snacks'];
 
   const formatDate = (dateStr) => {
-  if (!dateStr) return '-';
-  const [year, month, day] = dateStr.split('-'); // assumes date is in YYYY-MM-DD
-  return `${day}/${month}/${year}`;
-};
+    if (!dateStr) return '-';
+    const [year, month, day] = dateStr.split('-'); // assumes date is in YYYY-MM-DD
+    return `${day}/${month}/${year}`;
+  };
 
 
   useEffect(() => {
@@ -40,7 +40,34 @@ function BookingsPage() {
           customerName,
           ...bookingData,
         }));
-        setBookings(bookingsList);
+
+        // Sort bookings by eventDate
+        const sortedBookings = bookingsList.sort((a, b) => {
+          const dateA = a.details?.eventDate || '';
+          const dateB = b.details?.eventDate || '';
+
+          // Handle special cases like instant orders with '-/-/-' date
+          if (dateA === '-/-/-' && dateB === '-/-/-') return 0;
+          if (dateA === '-/-/-') return 1; // Put instant orders at the end
+          if (dateB === '-/-/-') return -1;
+
+          // Convert dates to comparable format (YYYY-MM-DD)
+          const formatDateForSort = (dateStr) => {
+            if (!dateStr || dateStr === '-/-/-') return '9999-12-31'; // Put invalid dates at the end
+            if (dateStr.includes('/')) {
+              const [day, month, year] = dateStr.split('/');
+              return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+            return dateStr; // Already in YYYY-MM-DD format
+          };
+
+          const formattedDateA = formatDateForSort(dateA);
+          const formattedDateB = formatDateForSort(dateB);
+
+          return formattedDateA.localeCompare(formattedDateB);
+        });
+
+        setBookings(sortedBookings);
       } else {
         setBookings([]);
       }
@@ -54,7 +81,34 @@ function BookingsPage() {
           customerName,
           ...bookingData,
         }));
-        setCompletedBookings(completedList);
+
+        // Sort completed bookings by eventDate
+        const sortedCompletedBookings = completedList.sort((a, b) => {
+          const dateA = a.details?.eventDate || '';
+          const dateB = b.details?.eventDate || '';
+
+          // Handle special cases like instant orders with '-/-/-' date
+          if (dateA === '-/-/-' && dateB === '-/-/-') return 0;
+          if (dateA === '-/-/-') return 1; // Put instant orders at the end
+          if (dateB === '-/-/-') return -1;
+
+          // Convert dates to comparable format (YYYY-MM-DD)
+          const formatDateForSort = (dateStr) => {
+            if (!dateStr || dateStr === '-/-/-') return '9999-12-31'; // Put invalid dates at the end
+            if (dateStr.includes('/')) {
+              const [day, month, year] = dateStr.split('/');
+              return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+            return dateStr; // Already in YYYY-MM-DD format
+          };
+
+          const formattedDateA = formatDateForSort(dateA);
+          const formattedDateB = formatDateForSort(dateB);
+
+          return formattedDateA.localeCompare(formattedDateB);
+        });
+
+        setCompletedBookings(sortedCompletedBookings);
       } else {
         setCompletedBookings([]);
       }
@@ -67,85 +121,85 @@ function BookingsPage() {
   }, [userPhone]);
 
   const handleCardClick = (customerName) => {
-  setSelectedCustomer(prev => (prev === customerName ? null : customerName));
-  const selectedBooking = bookings.find(b => b.customerName === customerName);
-  setPriceInputs(prev => ({
-    ...prev,
-    [customerName]: selectedBooking?.details?.pricePerPlate || ''
-  }));
-};
+    setSelectedCustomer(prev => (prev === customerName ? null : customerName));
+    const selectedBooking = bookings.find(b => b.customerName === customerName);
+    setPriceInputs(prev => ({
+      ...prev,
+      [customerName]: selectedBooking?.details?.pricePerPlate || ''
+    }));
+  };
 
-const handlePriceChange = (customerName, value) => {
-  setPriceInputs(prev => ({ ...prev, [customerName]: value }));
-};
+  const handlePriceChange = (customerName, value) => {
+    setPriceInputs(prev => ({ ...prev, [customerName]: value }));
+  };
 
-const savePricePerPlate = (booking) => {
-  const db = getDatabase();
-  const bookingRef = ref(db, `bookings/${userPhone}/${booking.customerName}/details`);
+  const savePricePerPlate = (booking) => {
+    const db = getDatabase();
+    const bookingRef = ref(db, `bookings/${userPhone}/${booking.customerName}/details`);
 
-  set(bookingRef, {
-    ...booking.details,
-    pricePerPlate: priceInputs[booking.customerName],
-  });
-};
+    set(bookingRef, {
+      ...booking.details,
+      pricePerPlate: priceInputs[booking.customerName],
+    });
+  };
 
-const handleDeleteBooking = (booking) => {
-  const db = getDatabase();
-  const bookingRef = ref(db, `bookings/${userPhone}/${booking.customerName}`);
-  const deleteRef = ref(db, `deleteBooking/${userPhone}/${booking.customerName}`);
+  const handleDeleteBooking = (booking) => {
+    const db = getDatabase();
+    const bookingRef = ref(db, `bookings/${userPhone}/${booking.customerName}`);
+    const deleteRef = ref(db, `deleteBooking/${userPhone}/${booking.customerName}`);
 
-  set(deleteRef, {
-    details: booking.details,
-    items: booking.items || {},
-  }).then(() => {
-    remove(bookingRef);
-  });
-};
-
-
+    set(deleteRef, {
+      details: booking.details,
+      items: booking.items || {},
+    }).then(() => {
+      remove(bookingRef);
+    });
+  };
 
 
 
- const generatePdf = async (booking) => {
-  const filename = `Order_${booking.details.name.replace(/\s/g, '_')}_${formatDate(booking.details.eventDate)}.pdf`;
 
-  const categoryOrder = CATEGORY_ORDER;
 
-  const selectedItems = booking.items || {};
-  const normalizedSelectedItems = {};
-  Object.entries(selectedItems).forEach(([key, value]) => {
-    normalizedSelectedItems[key.toLowerCase()] = value;
-  });
+  const generatePdf = async (booking) => {
+    const filename = `Order_${booking.details.name.replace(/\s/g, '_')}_${formatDate(booking.details.eventDate)}.pdf`;
 
-  const inputKeys = Object.keys(normalizedSelectedItems);
-  const orderedCategories = categoryOrder.filter(cat =>
-    inputKeys.includes(cat.toLowerCase())
-  );
-  const extraCategories = inputKeys.filter(
-    key => !categoryOrder.some(cat => cat.toLowerCase() === key)
-  );
-  const allCategories = [...orderedCategories, ...extraCategories];
+    const categoryOrder = CATEGORY_ORDER;
 
-  const formatCategory = (text) =>
-    text.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase());
+    const selectedItems = booking.items || {};
+    const normalizedSelectedItems = {};
+    Object.entries(selectedItems).forEach(([key, value]) => {
+      normalizedSelectedItems[key.toLowerCase()] = value;
+    });
 
-  const itemsHtml = allCategories.map(category => {
-    const items = normalizedSelectedItems[category.toLowerCase()];
-    const itemsArray = Array.isArray(items)
-      ? items
-      : typeof items === 'object'
-        ? Object.keys(items)
-        : [];
+    const inputKeys = Object.keys(normalizedSelectedItems);
+    const orderedCategories = categoryOrder.filter(cat =>
+      inputKeys.includes(cat.toLowerCase())
+    );
+    const extraCategories = inputKeys.filter(
+      key => !categoryOrder.some(cat => cat.toLowerCase() === key)
+    );
+    const allCategories = [...orderedCategories, ...extraCategories];
 
-    if (!itemsArray || itemsArray.length === 0) return '';
+    const formatCategory = (text) =>
+      text.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase());
 
-    const formattedItems = itemsArray.map(item =>
-      `<li style="margin: 2px 0; font-size: 17px; color:black; ">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
-    ).join('');
+    const itemsHtml = allCategories.map(category => {
+      const items = normalizedSelectedItems[category.toLowerCase()];
+      const itemsArray = Array.isArray(items)
+        ? items
+        : typeof items === 'object'
+          ? Object.keys(items)
+          : [];
 
-    const formattedCategory = formatCategory(category);
+      if (!itemsArray || itemsArray.length === 0) return '';
 
-    return `
+      const formattedItems = itemsArray.map(item =>
+        `<li style="margin: 2px 0; font-size: 17px; color:black; ">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
+      ).join('');
+
+      const formattedCategory = formatCategory(category);
+
+      return `
       <div style="margin-bottom: 10px; page-break-inside: avoid;">
         <h4 style="color: #8B4513; margin: 4px 0; font-size: 15px; font-weight:bold;">${formattedCategory}</h4>
         <ul style="margin: 0; padding-left: 16px; color: #555; page-break-inside: avoid;">
@@ -153,16 +207,16 @@ const handleDeleteBooking = (booking) => {
         </ul>
       </div>
     `;
-  }).join('');
+    }).join('');
 
-  const logoUrl = "https://res.cloudinary.com/dnllne8qr/image/upload/v1735446856/WhatsApp_Image_2024-12-27_at_8.13.22_PM-removebg_m3863q.png";
-  const logoBase64 = await getImageBase64(logoUrl);
-  const logoImageTag = logoBase64
-    ? `<img src="${logoBase64}" alt="Vijay Caterers Logo" style="max-width: 140px; height: auto; margin-bottom: 5px;">`
-    : '';
+    const logoUrl = "https://res.cloudinary.com/dnllne8qr/image/upload/v1753611051/WhatsApp_Image_2025-07-26_at_5.02.48_PM_zil48t.png";
+    const logoBase64 = await getImageBase64(logoUrl);
+    const logoImageTag = logoBase64
+      ? `<img src="${logoBase64}" alt="Vijay Caterers Logo" style="max-width: 140px; height: auto; margin-bottom: 5px;">`
+      : '';
 
-  const content = `
-    <div style="font-family: 'Georgia', serif; font-size: 16px; color: #3c3c3c; background-color: #fffbe6; border: 8px solid #f5e1a4; box-sizing: border-box; min-height: 100vh; display: flex; flex-direction: column; padding-bottom:470px;">
+    const content = `
+    <div style="font-family: 'Georgia', serif; font-size: 16px; color: #3c3c3c; background-color: #fffbe6; border: 8px solid #f5e1a4; box-sizing: border-box; min-height: 100vh; display: flex; flex-direction: column; padding-bottom:480px;">
       
       <div style="text-align: center; padding: 15px; border-bottom: 2px dashed #d2b48c;">
         ${logoImageTag}
@@ -184,7 +238,7 @@ const handleDeleteBooking = (booking) => {
               <p style="margin: 2px 0;"><strong>Event Time:</strong> ${booking.details.eventTime}</p>
               <p style="margin: 2px 0;"><strong>Event Place:</strong> ${booking.details.eventPlace}</p>
               <p style="margin: 2px 0;"><strong>No. of Plates:</strong> ${booking.details.plates}</p>
-              <p style="margin: 2px 0;"><strong>Price Per Plate:</strong> ₹${booking.details.pricePerPlate || '-'}</p>
+              <p style="margin: 2px 0;"><strong>price per packs:</strong> ₹${booking.details.pricePerPlate || '-'}</p>
             </div>
           </div>
         </div>
@@ -230,8 +284,8 @@ const handleDeleteBooking = (booking) => {
     </div>
   `;
 
-  html2pdf().from(content).save(filename);
-};
+    html2pdf().from(content).save(filename);
+  };
 
 
 
@@ -240,256 +294,256 @@ const handleDeleteBooking = (booking) => {
   };
 
   const handleSendToAdmin = (booking) => {
-  const { name, mobile, eventPlace } = booking.details;
+    const { name, mobile, eventPlace } = booking.details;
 
-  if (
-    name.trim().toLowerCase() === 'instant order' &&
-    mobile.trim() === '0000000000' &&
-    eventPlace.trim().toLowerCase() === 'unknown venue'
-  ) {
-    alert('Please edit the booking details before sending to admin.');
-    return;
-  }
+    if (
+      name.trim().toLowerCase() === 'instant order' &&
+      mobile.trim() === '0000000000' &&
+      eventPlace.trim().toLowerCase() === 'unknown venue'
+    ) {
+      alert('Please edit the booking details before sending to admin.');
+      return;
+    }
 
-  const db = getDatabase();
-  const bookingRef = ref(db, `bookings/${userPhone}/${booking.customerName}`);
-  const finalBookingRef = ref(db, `finalBookings/${userPhone}/${booking.customerName}`);
+    const db = getDatabase();
+    const bookingRef = ref(db, `bookings/${userPhone}/${booking.customerName}`);
+    const finalBookingRef = ref(db, `finalBookings/${userPhone}/${booking.customerName}`);
 
-  set(finalBookingRef, {
-    details: booking.details,
-    items: booking.items || {},
-  }).then(() => {
-    remove(bookingRef);
-  });
-};
-
-
-const renderBookingCard = (booking, isCompleted = false) => {
-  const itemCount = Object.values(booking.items || {}).reduce((total, categoryItems) => {
-  if (Array.isArray(categoryItems)) return total + categoryItems.length;
-  if (typeof categoryItems === 'object') return total + Object.keys(categoryItems).length;
-  return total;
-}, 0);
-
-
-  const allItems = booking.items || {};
-
-  // Separate categories
-  const nonVegItems = NON_VEG_SNACKS.filter(cat => allItems[cat]);
-  const vegSnacksItems = allItems['vegSnacks'];
-  const otherCategories = Object.entries(allItems)
-    .filter(([key]) => key !== 'vegSnacks' && !NON_VEG_SNACKS.includes(key))
-    .sort(([a], [b]) => {
-      const indexA = CATEGORY_ORDER.indexOf(a);
-      const indexB = CATEGORY_ORDER.indexOf(b);
-      return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+    set(finalBookingRef, {
+      details: booking.details,
+      items: booking.items || {},
+    }).then(() => {
+      remove(bookingRef);
     });
-
-  return (
-    <div
-      key={booking.customerName}
-      className={`booking-card ${selectedCustomer === booking.customerName ? 'expanded' : ''}`}
-      onClick={() => handleCardClick(booking.customerName)}
-    >
-      <div className="booking-card-header">
-        <h3 className="customer-name">{booking.details.name}</h3>
-        <span className="item-count">{itemCount} items</span>
-      </div>
-
-      <div className="booking-details">
-        <div className="detail-row">
-          <span className="detail-label">Mobile:</span>
-          <span className="detail-value">{booking.details.mobile}</span>
-        </div>
-        <div className="detail-row">
-          <span className="detail-label">Event:</span>
-          <span className="detail-value">
-  {formatDate(booking.details.eventDate)} for {booking.details.eventTime}, {booking.details.eventPlace}
-</span>
-
-        </div>
-        <div className="detail-row">
-          <span className="detail-label">Plates:</span>
-          <span className="detail-value">{booking.details.plates}</span>
-        </div>
-        {booking.details.pricePerPlate && (
-  <div className="detail-row">
-    <span className="detail-label">Price/Plate:</span>
-    <span className="detail-value">₹{booking.details.pricePerPlate}</span>
-  </div>
-)}
-
-      </div>
-
-      {selectedCustomer === booking.customerName && (
-        <div className="booking-expanded">
-          {!isCompleted && (
-  <div
-    className="price-input-container"
-    style={{ marginBottom: '1rem' }}
-    onClick={(e) => e.stopPropagation()}
-  >
-    <label
-      style={{ fontWeight: '500', marginBottom: '0.5rem', display: 'block' }}
-    >
-      💰 Price Per Plate (₹):
-    </label>
-    <input
-      type="number"
-      value={priceInputs[booking.customerName] || ''}
-      onChange={(e) => handlePriceChange(booking.customerName, e.target.value)}
-      placeholder="Enter price per plate"
-      style={{
-        padding: '0.5rem',
-        borderRadius: '5px',
-        border: '1px solid #ccc',
-        marginRight: '10px',
-        width: '150px',
-      }}
-    />
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        savePricePerPlate(booking);
-      }}
-      style={{
-        padding: '0.5rem 1rem',
-        backgroundColor: '#2ecc71',
-        color: 'white',
-        border: 'none',
-        borderRadius: '5px',
-        cursor: 'pointer',
-      }}
-    >
-      OK
-    </button>
-  </div>
-)}
+  };
 
 
+  const renderBookingCard = (booking, isCompleted = false) => {
+    const itemCount = Object.values(booking.items || {}).reduce((total, categoryItems) => {
+      if (Array.isArray(categoryItems)) return total + categoryItems.length;
+      if (typeof categoryItems === 'object') return total + Object.keys(categoryItems).length;
+      return total;
+    }, 0);
 
-          <div className="items-section">
-  <h4 className="section-title">🍽️ Selected Items</h4>
-  {counters.map((group) => {
-    const groupItems = group.categories
-      .map((category) => ({ category, items: allItems[category] }))
-      .filter((entry) => entry.items && Object.keys(entry.items).length > 0);
 
-    if (groupItems.length === 0) return null;
+    const allItems = booking.items || {};
+
+    // Separate categories
+    const nonVegItems = NON_VEG_SNACKS.filter(cat => allItems[cat]);
+    const vegSnacksItems = allItems['Veg Snacks'];
+    const otherCategories = Object.entries(allItems)
+      .filter(([key]) => key !== 'Veg Snacks' && !NON_VEG_SNACKS.includes(key))
+      .sort(([a], [b]) => {
+        const indexA = CATEGORY_ORDER.indexOf(a);
+        const indexB = CATEGORY_ORDER.indexOf(b);
+        return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+      });
 
     return (
-      <div key={group.title} className="category-group" style={{ marginBottom: '1rem' }}>
-        <h5 className="category-title">{group.title}</h5>
-        <div style={{ paddingLeft: '1rem' }}>
-          {groupItems.map(({ category, items }) => (
-            <div key={category} style={{ marginBottom: '0.75rem' }}>
-              <h6 style={{ fontSize: '0.9rem', color: '#555', marginBottom: '0.25rem' }}>
-                {category.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase())}
-              </h6>
-              <ul className="item-list">
-                {Object.values(items).map((item, idx) => (
-                  <li key={idx}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
+      <div
+        key={booking.customerName}
+        className={`booking-card ${selectedCustomer === booking.customerName ? 'expanded' : ''}`}
+        onClick={() => handleCardClick(booking.customerName)}
+      >
+        <div className="booking-card-header">
+          <h3 className="customer-name">{booking.details.name}</h3>
+          <span className="item-count">{itemCount} items</span>
         </div>
-      </div>
-    );
-  })}
-</div>
 
+        <div className="booking-details">
+          <div className="detail-row">
+            <span className="detail-label">Mobile:</span>
+            <span className="detail-value">{booking.details.mobile}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">Event:</span>
+            <span className="detail-value">
+              {formatDate(booking.details.eventDate)} for {booking.details.eventTime}, {booking.details.eventPlace}
+            </span>
 
-          {!isCompleted && (
-            <div className="action-buttons">
-              <button
-  className="btn btn-edit-details"
-  onClick={(e) => {
-    e.stopPropagation();
-    navigate('/edit-details', {
-      state: {
-        booking, // contains details and customerName
-      },
-    });
-  }}
->
-  📝 Edit Details
-</button>
-
-              <button
-                className="btn btn-edit"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEditClick(booking);
-                }}
-              >
-                ✏️ Edit Items
-              </button>
-              <button
-                className="btn btn-email"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSendToAdmin(booking);
-                }}
-              >
-                ✅ Send to Admin
-              </button>
-              <button
-                className="btn btn-pdf"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  generatePdf(booking);
-                }}
-              >
-                📄 Download PDF
-              </button>
-              <button
-                className="btn btn-whatsapp"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const phone = booking.details.mobile.replace(/\D/g, '');
-                  const message = encodeURIComponent(
-  `*🌟 Booking Confirmation - Vijay Caterers 🌟*\n\n` +
-  `Hello *Mr/Ms ${booking.details.name}*,\n\n` +
-  `This is a confirmation of your booking with *Vijay Caterers*.\n\n` +
-  `📅 *Date:* ${formatDate(booking.details.eventDate)}\n` +
-  `📍 *Venue:* ${booking.details.eventPlace}\n` +
-  `🕒 *Time:* ${booking.details.eventTime}\n` +
-  `🍽️ *Plates:* ${booking.details.plates}\n` +
-  `💰 *Price/Plate:* ₹${booking.details.pricePerPlate || 'N/A'}\n\n` +
-  `Thank you for choosing *Vijay Caterers*! We look forward to serving you.\n\n` +
-  `If you have any updates feel free to contact us:\n` +
-  `📞 9866937747 | 9959500833\n` +
-  `📧 vijaycaterers2005@gmail.com`
-);
-
-window.open(`https://wa.me/91${booking.details.mobile.replace(/\D/g, '')}?text=${message}`, '_blank');
-
-
-                }}
-              >
-                📱 WhatsApp
-              </button>
-              <button
-  className="btn btn-delete"
-  onClick={(e) => {
-    e.stopPropagation();
-    const confirmDelete = window.confirm(`Are you sure you want to delete the booking for ${booking.details.name}?`);
-    if (confirmDelete) {
-      handleDeleteBooking(booking);
-    }
-  }}
->
-  🗑️ Delete Booking
-</button>
-
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">Plates:</span>
+            <span className="detail-value">{booking.details.plates}</span>
+          </div>
+          {booking.details.pricePerPlate && (
+            <div className="detail-row">
+              <span className="detail-label">Price/Plate:</span>
+              <span className="detail-value">₹{booking.details.pricePerPlate}</span>
             </div>
           )}
+
         </div>
-      )}
-    </div>
-  );
-};
+
+        {selectedCustomer === booking.customerName && (
+          <div className="booking-expanded">
+            {!isCompleted && (
+              <div
+                className="price-input-container"
+                style={{ marginBottom: '1rem' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <label
+                  style={{ fontWeight: '500', marginBottom: '0.5rem', display: 'block' }}
+                >
+                  💰 price per packs (₹):
+                </label>
+                <input
+                  type="number"
+                  value={priceInputs[booking.customerName] || ''}
+                  onChange={(e) => handlePriceChange(booking.customerName, e.target.value)}
+                  placeholder="Enter price per packs"
+                  style={{
+                    padding: '0.5rem',
+                    borderRadius: '5px',
+                    border: '1px solid #ccc',
+                    marginRight: '10px',
+                    width: '150px',
+                  }}
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    savePricePerPlate(booking);
+                  }}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#2ecc71',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  OK
+                </button>
+              </div>
+            )}
+
+
+
+            <div className="items-section">
+              <h4 className="section-title">🍽️ Selected Items</h4>
+              {counters.map((group) => {
+                const groupItems = group.categories
+                  .map((category) => ({ category, items: allItems[category] }))
+                  .filter((entry) => entry.items && Object.keys(entry.items).length > 0);
+
+                if (groupItems.length === 0) return null;
+
+                return (
+                  <div key={group.title} className="category-group" style={{ marginBottom: '1rem' }}>
+                    <h5 className="category-title">{group.title}</h5>
+                    <div style={{ paddingLeft: '1rem' }}>
+                      {groupItems.map(({ category, items }) => (
+                        <div key={category} style={{ marginBottom: '0.75rem' }}>
+                          <h6 style={{ fontSize: '0.9rem', color: '#555', marginBottom: '0.25rem' }}>
+                            {category.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase())}
+                          </h6>
+                          <ul className="item-list">
+                            {Object.values(items).map((item, idx) => (
+                              <li key={idx}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+
+            {!isCompleted && (
+              <div className="action-buttons">
+                <button
+                  className="btn btn-edit-details"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/edit-details', {
+                      state: {
+                        booking, // contains details and customerName
+                      },
+                    });
+                  }}
+                >
+                  📝 Edit Details
+                </button>
+
+                <button
+                  className="btn btn-edit"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditClick(booking);
+                  }}
+                >
+                  ✏️ Edit Items
+                </button>
+                <button
+                  className="btn btn-email"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSendToAdmin(booking);
+                  }}
+                >
+                  ✅ Send to Admin
+                </button>
+                <button
+                  className="btn btn-pdf"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    generatePdf(booking);
+                  }}
+                >
+                  📄 Download PDF
+                </button>
+                <button
+                  className="btn btn-whatsapp"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const phone = booking.details.mobile.replace(/\D/g, '');
+                    const message = encodeURIComponent(
+                      `*🌟 Booking Confirmation - Vijay Caterers 🌟*\n\n` +
+                      `Hello *Mr/Ms ${booking.details.name}*,\n\n` +
+                      `This is a confirmation of your booking with *Vijay Caterers*.\n\n` +
+                      `📅 *Date:* ${formatDate(booking.details.eventDate)}\n` +
+                      `📍 *Venue:* ${booking.details.eventPlace}\n` +
+                      `🕒 *Time:* ${booking.details.eventTime}\n` +
+                      `🍽️ *Plates:* ${booking.details.plates}\n` +
+                      `💰 *Price/Plate:* ₹${booking.details.pricePerPlate || 'N/A'}\n\n` +
+                      `Thank you for choosing *Vijay Caterers*! We look forward to serving you.\n\n` +
+                      `If you have any updates feel free to contact us:\n` +
+                      `📞 9866937747 | 9959500833\n` +
+                      `📧 vijaycaterers2005@gmail.com`
+                    );
+
+                    window.open(`https://wa.me/91${booking.details.mobile.replace(/\D/g, '')}?text=${message}`, '_blank');
+
+
+                  }}
+                >
+                  📱 WhatsApp
+                </button>
+                <button
+                  className="btn btn-delete"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const confirmDelete = window.confirm(`Are you sure you want to delete the booking for ${booking.details.name}?`);
+                    if (confirmDelete) {
+                      handleDeleteBooking(booking);
+                    }
+                  }}
+                >
+                  🗑️ Delete Booking
+                </button>
+
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
 
 

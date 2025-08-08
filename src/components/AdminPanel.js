@@ -3,7 +3,7 @@ import { getDatabase, ref, onValue, remove, set, update } from 'firebase/databas
 import { useNavigate } from 'react-router-dom';
 import emailjs from 'emailjs-com';
 import html2pdf from 'html2pdf.js';
-import { counters } from '../components/AllTextItems'; // Assuming this import is correct
+import { counters, CATEGORY_ORDER } from '../components/AllTextItems'; // Assuming this import is correct
 
 function AdminPanel() {
   const [bookings, setBookings] = useState([]);
@@ -23,16 +23,7 @@ function AdminPanel() {
     }
   }, []);
 
-  const CATEGORY_ORDER = [
-    'sweets', 'juices', 'vegSnacks', 'hots', 'rotis',
-    'kurmaCurries', 'specialGravyCurries', 'specialRiceItems', 'vegDumBiryanis',
-    'dalItems', 'vegFryItems', 'liquidItems', 'rotiChutneys',
-    'avakayalu', 'powders', 'curds', 'papads', 'chatItems', 'chineseList',
-    'italianSnacks', 'southIndianTiffins', 'fruits', 'iceCreams', 'pan', 'soda',
-    'chickenSnacks', 'prawnSnacks', 'eggSnacks', 'seaFoods',
-    'muttonCurries', 'eggItems', 'prawnsItems', 'chickenCurries',
-    'crabItems', 'nonVegBiryanis', 'customItems'
-  ];
+
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -56,7 +47,7 @@ function AdminPanel() {
 
   const savePricePerPlate = booking => {
     const price = priceInputs[booking.customerKey];
-    if (!price) return alert('Enter a valid price per plate.');
+    if (!price) return alert('Enter a valid price per packs.');
     const db = getDatabase();
     update(ref(db, `finalBookings/${booking.userMobile}/${booking.customerKey}/details`), { pricePerPlate: price })
       .then(() => setBookings(curr =>
@@ -94,32 +85,32 @@ function AdminPanel() {
   };
 
   const getImageBase64 = async (url) => {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.error('Error converting image to Base64:', error);
-    return null; // Return null or a placeholder if conversion fails
-  }
-};
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Error converting image to Base64:', error);
+      return null; // Return null or a placeholder if conversion fails
+    }
+  };
 
-   const generatePdf = async (booking) => {
+  const generatePdf = async (booking) => {
     const filename = `Order_${booking.details.name.replace(/\s/g, '_')}_${formatDate(booking.details.eventDate)}.pdf`;
-  
+
     const categoryOrder = CATEGORY_ORDER;
-  
+
     const selectedItems = booking.items || {};
     const normalizedSelectedItems = {};
     Object.entries(selectedItems).forEach(([key, value]) => {
       normalizedSelectedItems[key.toLowerCase()] = value;
     });
-  
+
     const inputKeys = Object.keys(normalizedSelectedItems);
     const orderedCategories = categoryOrder.filter(cat =>
       inputKeys.includes(cat.toLowerCase())
@@ -128,10 +119,10 @@ function AdminPanel() {
       key => !categoryOrder.some(cat => cat.toLowerCase() === key)
     );
     const allCategories = [...orderedCategories, ...extraCategories];
-  
+
     const formatCategory = (text) =>
       text.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase());
-  
+
     const itemsHtml = allCategories.map(category => {
       const items = normalizedSelectedItems[category.toLowerCase()];
       const itemsArray = Array.isArray(items)
@@ -139,15 +130,15 @@ function AdminPanel() {
         : typeof items === 'object'
           ? Object.keys(items)
           : [];
-  
+
       if (!itemsArray || itemsArray.length === 0) return '';
-  
+
       const formattedItems = itemsArray.map(item =>
         `<li style="margin: 2px 0; font-size: 17px; color:black; ">🍽️ ${typeof item === 'string' ? item : item.name}</li>`
       ).join('');
-  
+
       const formattedCategory = formatCategory(category);
-  
+
       return `
         <div style="margin-bottom: 10px; page-break-inside: avoid;">
           <h4 style="color: #8B4513; margin: 4px 0; font-size: 19px; font-weight:bold;">${formattedCategory}</h4>
@@ -157,13 +148,13 @@ function AdminPanel() {
         </div>
       `;
     }).join('');
-  
-    const logoUrl = "https://res.cloudinary.com/dnllne8qr/image/upload/v1735446856/WhatsApp_Image_2024-12-27_at_8.13.22_PM-removebg_m3863q.png";
+
+    const logoUrl = "https://res.cloudinary.com/dnllne8qr/image/upload/v1753611051/WhatsApp_Image_2025-07-26_at_5.02.48_PM_zil48t.png";
     const logoBase64 = await getImageBase64(logoUrl);
     const logoImageTag = logoBase64
       ? `<img src="${logoBase64}" alt="Vijay Caterers Logo" style="max-width: 140px; height: auto; margin-bottom: 8px;">`
       : '';
-  
+
     const content = `
       <div style="font-family: 'Georgia', serif; font-size: 16px; color: #3c3c3c; background-color: #fffbe6; border: 8px solid #f5e1a4; box-sizing: border-box; min-height: 100vh; display: flex; flex-direction: column; padding-bottom:480px;">
         
@@ -187,7 +178,7 @@ function AdminPanel() {
                 <p style="margin: 2px 0;"><strong>Event Time:</strong> ${booking.details.eventTime}</p>
                 <p style="margin: 2px 0;"><strong>Event Place:</strong> ${booking.details.eventPlace}</p>
                 <p style="margin: 2px 0;"><strong>No. of Plates:</strong> ${booking.details.plates}</p>
-                <p style="margin: 2px 0;"><strong>Price Per Plate:</strong> ₹${booking.details.pricePerPlate || '-'}</p>
+                <p style="margin: 2px 0;"><strong>price per packs:</strong> ₹${booking.details.pricePerPlate || '-'}</p>
               </div>
             </div>
           </div>
@@ -232,7 +223,7 @@ function AdminPanel() {
       </div>
       </div>
     `;
-  
+
     html2pdf().from(content).save(filename);
   };
 
@@ -398,7 +389,7 @@ function AdminPanel() {
                   {isExpanded && !isPast && (
                     <div className="booking-expanded">
                       <div className="price-edit">
-                        <label>Price per plate:</label>
+                        <label>price per packs:</label>
                         <input
                           type="number"
                           value={priceInputs[customerKey] || ''}

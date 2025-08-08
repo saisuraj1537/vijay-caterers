@@ -53,7 +53,7 @@ function AppContent() {
   }}>
           
   <img
-    src="https://res.cloudinary.com/dnllne8qr/image/upload/v1735446856/WhatsApp_Image_2024-12-27_at_8.13.22_PM-removebg_m3863q.png"
+    src="https://res.cloudinary.com/dnllne8qr/image/upload/v1753611051/WhatsApp_Image_2025-07-26_at_5.02.48_PM_zil48t.png"
     alt="Logo"
     height="40"
     className="me-2"
@@ -121,8 +121,6 @@ function AppContent() {
               <Route path="/booking-details" element={<BookingDetailsForm />} />
               <Route path="/select-items" element={<SelectItemsPage customerData={customerData} />} />
               <Route path="/final-select-items" element={<FinalSelectItemsPage customerData={customerData} />} />
-              {/* <Route path="/select-items" element={<SelectItemsUnifiedPage mode="initial" />} />
-              <Route path="/final-select-items" element={<SelectItemsUnifiedPage mode="final" />} /> */}
               <Route path="/edit-details" element={<EditCustomerForm />} />
 
             </>
